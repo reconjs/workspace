@@ -1,0 +1,20 @@
+{
+  "name": "@reconjs/utils-react",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Utilities for React",
+  "types": "./src/client.tsx",
+  "exports": {
+    ".": {
+      "react-server": "./src/index.tsx",
+      "default": "./src/client.tsx"
+    }
+  },
+  "peerDependencies": {
+    "@headlessui/react": "^1.7.15",
+    "@heroicons/react": "^2.0.18",
+    "@reconjs/utils": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@reconjs/utils",
+  "version": "1.0.0",
+  "description": "Extension of Typescript",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./lodash": "./src/lodash.ts"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "pipe-ts": "0.0.9",
+    "shallowequal": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.175",
+    "@types/shallowequal": "^1.1.1"
+  }
+}

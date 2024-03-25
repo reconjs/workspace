@@ -1,0 +1,21 @@
+{
+  "name": "@reconjs/next",
+  "private": true,
+  "version": "1.0.0",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": {
+      "default": "./src/index.tsx"
+    }
+  },
+  "dependencies": {
+    "@reconjs/core": "workspace:*",
+    "@reconjs/recon": "workspace:*",
+    "@reconjs/react": "workspace:*",
+    "@reconjs/utils": "workspace:*",
+    "@reconjs/utils-react": "workspace:*",
+    "@reconjs/utils-server": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

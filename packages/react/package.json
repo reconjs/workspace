@@ -1,0 +1,19 @@
+{
+  "name": "@reconjs/react",
+  "private": true,
+  "version": "1.0.0",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@reconjs/core": "workspace:*",
+    "@reconjs/recon": "workspace:*",
+    "@reconjs/utils": "workspace:*",
+    "@reconjs/utils-react": "workspace:*",
+    "@reconjs/utils-server": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

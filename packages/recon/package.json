@@ -1,0 +1,14 @@
+{
+  "name": "@reconjs/recon",
+  "private": true,
+  "version": "1.0.0",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@reconjs/utils": "workspace:*"
+  }
+}

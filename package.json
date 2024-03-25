@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "scripts": {
+    "lolalemon:shop": "nx dev @lolalemon/shop",
+    "dev": "nx dev @lolalemon/shop"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.3",
+    "@types/lodash": "^4.14.200",
+    "@types/node": "^20.8.10",
+    "@types/react": "^18.2.33",
+    "@types/react-dom": "^18.2.14",
+    "@types/uuid": "^9.0.6",
+    "next": "^14.0.3",
+    "nx": "^17.0.2",
+    "typescript": "^5.2.2"
+  }
+}

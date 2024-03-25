@@ -1,0 +1,12 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  // Note that `javascript.preferences.autoImportFileExcludePatterns` can be specified for JavaScript too.
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "**/lodash",
+    "**/recon.ts",
+    "**/recon.tsx",
+    "**/main/src",
+  ],
+  "editor.tabSize": 2
+}

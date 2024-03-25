@@ -1,0 +1,7 @@
+# pnpm-workspace.yaml
+packages:
+  # Examples: The apps for the examples
+  - 'examples/*'
+
+  # Packages:
+  - 'packages/*'
