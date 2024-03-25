@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "lolalemon:shop": "nx dev @lolalemon/shop",
-    "dev": "nx dev @lolalemon/shop"
+    "dev": "nx dev hello-world",
+    "lolalemon": "nx dev lolalemon"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.3",
