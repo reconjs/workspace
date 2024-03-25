@@ -6,13 +6,28 @@ we want to make it possible to compose entire full-stack applications.
 There are no devtool plugins but a bundler does need
 to be configured to create client and server bundles.
 
+## Getting Started
+
+Currently, this library isn't being published because it doesn't work yet.
+
+### How do I navigate the repo?
+
+- `examples` contains locally runnable projects for testing the packages.
+- `packages` contains the publishable packages that make up the core functionality.
+
+### Which example should I start with?
+
+`examples/hello-world` is the simplest.
+
+`examples/lolalemon` will demonstrate how this scales to a real use case.
+
 ## Packages
 
 `@reconjs/recon` is a package for library authors to build new Recon APIs,
 including the ones in this repo.
 
 - `@reconjs/core` for framework-agnostic Recon APIs.
-- `@reconjs/server` for server-specific Recon APIs.
+- `@reconjs/server` (TODO) for server-specific Recon APIs.
 
 There are also general packages starting with `@reconjs/utils-`
 that even non-Recon projects can use.
@@ -26,11 +41,3 @@ If this gets traction, more framework may be added.
 - `@reconjs/react` for ReactJS-specific Recon APIs.
 - `@reconjs/next` for NextJS-specific Recon APIs.
 - `@reconjs/utils-react` for React-specific utilities.
-
-## How do I navigate this repo?
-
-### Directory Structure
-
-- `data` contains the mock data for the examples.
-- `examples` contains locally runnable projects for testing the packages.
-- `packages` contains the publishable packages that make up the core functionality.
