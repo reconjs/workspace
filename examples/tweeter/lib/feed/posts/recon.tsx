@@ -16,21 +16,10 @@ const postsByFeed = stored (
   },
 )
 
-const usingFirstPost = defineAsync (() => {
-  const theFeed = usingFeed ()
-  
-  return asPost (async () => {
-    const posts = postsByFeed (theFeed ())
-    const res = await posts.get ()
-    return res[0]
-  })
-})
-
 const usingPosts = defineAsync (() => {
   const theFeed = usingFeed ()
 
   const asPosts = usingCollection (asPost)
-  
   
   return asPosts (async () => {
     const posts = postsByFeed (theFeed ())

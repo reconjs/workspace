@@ -19,7 +19,7 @@ const Layout = withRoute (_Layout)
 export default function RootLayout (props: any) {
   return (
     <html>
-      <body>
+      <body className="flex flex-col md:flex-row justify-center divide-x">
         <Suspense>
           <Root handler={ACTION}>
             <Layout params={props.params}>

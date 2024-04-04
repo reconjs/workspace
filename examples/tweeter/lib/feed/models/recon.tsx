@@ -6,8 +6,8 @@ import {
   usingOptional,
 } from "@reconjs/core"
 
-class Feed extends Model <"string"> {}
-class Post extends Model <"string"> {}
+class Feed extends Model <string> {}
+class Post extends Model <string> {}
 
 export type { Feed, Post }
 

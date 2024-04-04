@@ -1,1 +1,1 @@
-import "@/app/lib/greeting"
+import "@/lib/feed"
