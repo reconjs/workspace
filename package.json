@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "dev": "nx dev hello-world",
-    "lolalemon": "nx dev lolalemon"
+    "lolalemon": "nx dev lolalemon",
+    "tweeter": "nx dev tweeter"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.3",
@@ -11,6 +12,8 @@
     "@types/react": "^18.2.33",
     "@types/react-dom": "^18.2.14",
     "@types/uuid": "^9.0.6",
+    "eslint": "^8.52.0",
+    "eslint-config-next": "latest",
     "next": "^14.0.3",
     "nx": "^17.0.2",
     "typescript": "^5.2.2"
