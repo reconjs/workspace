@@ -39,6 +39,10 @@ export function defineAsync <
     return usingDefinedAsync (factory, ...args)
   }
 
+  try {
+    getConsumers (factory)
+  } catch (_) {}
+
   // @ts-ignore
   def.viaServer = (key: string) => {
     registerDefinition (key, (...atoms: Atom <Modelable>[]) => {

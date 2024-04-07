@@ -148,7 +148,6 @@ const getPromise = memoize (async (factory) => {
     factory (...MODELS)
   })
 
-  await preflush ()
   return read ()
 })
 

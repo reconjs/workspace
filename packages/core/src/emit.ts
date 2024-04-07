@@ -45,6 +45,10 @@ export function defineAction <
     return usingDefinedAction (factory, ...args)
   }
 
+  try {
+    getConsumers (factory)
+  } catch (_) {}
+
   def.viaServer = (key: string) => {
     console.log ("[defineAction] viaServer", key)
 
