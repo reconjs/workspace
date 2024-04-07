@@ -1,5 +1,10 @@
-import { defineHook, usingConstant } from "./hooks"
-import { Store, createStore, isEqual, memoize } from "@reconjs/utils"
+import {
+  Fanc0,
+  createStore,
+  isEqual,
+  memoize,
+  presolve,
+} from "@reconjs/utils"
 
 
 
@@ -14,6 +19,7 @@ const getWindow = (): Window & Record <string, any> => {
 
 export type Manifest = {
   kind: string,
+  scopes: string[],
 }
 
 function doo <T> (func: () => T) {
@@ -45,33 +51,48 @@ getWindow ().MANIFESTS = MANIFESTS
 
 
 
-const NEVER = {} as any
+const NEVER: any = {}
 
 export const manifestBy = memoize ((key: string) => {
-  const store = createStore (() => {
-    return NEVER as Manifest
-  })
+  function getCurrent () {
+    return MANIFESTS.read ()[key]
+  }
 
-  store.read = () => MANIFESTS.read () [key]
-
-  store.dispatch = (manifest) => {
+  function setCurrent (manifest: Manifest) {
     MANIFESTS.dispatch ({
+      ...MANIFESTS.read (),
       [key]: manifest,
     })
   }
 
-  MANIFESTS.subscribe (() => {
-    const curr = store.read ()
-
-    const next = doo (() => {
-      const all = MANIFESTS.read ()
-      return all [key]
+  const self = doo (() => {
+    const store = createStore ((): VoidFunction => {
+      return () => {}
     })
-    
-    if (! isEqual (curr, next)) {
-      store.dispatch (next)
+
+    return {
+      get: () => {
+        const presolver = store.read ()
+        presolver ()
+        return getCurrent ()
+      },
+      preload: (load: Fanc0<Manifest>) => {
+        console.log ("Preload added", key)
+
+        const promise = doo (async () => {
+          const manifest = await load ()
+          setCurrent (manifest)
+        })
+
+        const init = presolve (async () => {
+          await promise
+          return () => {}
+        })
+
+        store.dispatch (init)
+      },
     }
   })
 
-  return store
+  return self
 })

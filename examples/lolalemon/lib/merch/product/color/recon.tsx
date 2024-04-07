@@ -27,7 +27,7 @@ async function fetchProductById (id: string) {
   const product = PRODUCTS
     .find (p => p.id === id)
 
-  if (! product) throw new Error ("invalid id")
+  if (! product) throw new Error (`invalid id: ${id}`)
   return product
 }
 

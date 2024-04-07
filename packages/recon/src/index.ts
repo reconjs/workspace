@@ -35,6 +35,13 @@ export {
   usingServerImport,
 } from "./core-hooks"
 
+export {
+  getConsumers,
+  ManifestMode,
+  usingChildConsumers,
+  usingProxyAtom,
+} from "./get-consumers"
+
 export type { Manifest } from "./manifest"
 export { MANIFESTS, manifestBy } from "./manifest"
 

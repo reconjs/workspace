@@ -3,15 +3,17 @@ import {
   Atomizable,
   Atoms,
   Modelable,
+  getConsumers,
+  getProviderKey,
   manifestBy,
   registerDefinition,
   usingDefined,
   usingDefinedAsync,
   usingServerAtom
 } from "@reconjs/recon"
+import { susync } from "@reconjs/utils"
 
 type AnyFactory <T = any> = (...args: Modelable[]) => () => T
-
 type AnyAtomDef = (...args: Atoms) => Atom
 
 export function define <
@@ -42,8 +44,15 @@ export function defineAsync <
     registerDefinition (key, (...atoms: Atom <Modelable>[]) => {
       return usingServerAtom (key, ...atoms)
     })
-    manifestBy (key).dispatch ({
-      kind: "atom",
+    
+    manifestBy (key).preload (async () => {
+      const consumers = await susync (() => getConsumers (factory))
+      const scopes = consumers.map (getProviderKey)
+
+      return {
+        kind: "atom",
+        scopes,
+      }
     })
   }
 

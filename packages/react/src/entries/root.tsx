@@ -20,30 +20,21 @@ import {
   Modelable,
   defineHook,
   usingStack,
-  usingProvided,
-  usingProvider,
-  ReconContext,
-  ReconProvider,
-  SerializedNode,
-  getProviderKey,
-  usingDefinedAsync,
   usingDefined,
   manifestBy,
   usingDefinedEvent,
+  getConsumers,
 } from "@reconjs/recon"
 
 import { 
-  AnyFunction,
   Fanc,
   Func,
   Func0,
   Serial,
-  Vanc,
   guidBy,
   isEqual, 
   loadPromise, 
   memoize, 
-  once, 
   preflush, 
   susync,
 } from "@reconjs/utils"
@@ -51,7 +42,6 @@ import {
 import {
   Fragment,
   PropsWithChildren,
-  lazy,
   use,
   useId,
   useMemo,
@@ -63,19 +53,21 @@ import {
 } from "../lib/depository"
 
 import {
-  usingDefinedAsync_default,
   usingDefined_default
 } from "../lib/provide-defined"
 
-import { Depository, usingQuery, validateDepository } from "../lib/using-query"
+import { 
+  Depository, 
+  usingQuery, 
+  validateDepository,
+} from "../lib/using-query"
+
 import { RuntimeContext } from "../client/runtime-context"
 import { ClientMode } from "../client/mode"
 import { ReconStoreProvider, handleStore } from "../define-store"
 import { clientContextOf } from "../lib/client-context"
 import { usingSource } from "../lib/client-sync"
-import { getConsumers } from "../meta/get-consumers"
 import { usingDeferredView } from "../via-deferred"
-import { usingDefinedClientView } from "../client/defined-view"
 import { usingScopeSerializer, usingScopeStackSync } from "../lib/scopes"
 import { SerialScope } from "../types"
 import { handleSsrHack } from "../ssr-hack"
@@ -159,7 +151,8 @@ const handleServer = () => handleHook (usingServerAtom, (key, ...atoms) => {
     const args = atoms.map (a => a())
     const scopes = getScopes ()
 
-    const manifest = manifestBy (key).read ()
+    const manifest = manifestBy (key).get ()
+    
     if (manifest.kind === "action") {
       return async () => {
         console.log ("action called: ", key)

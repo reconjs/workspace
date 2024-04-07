@@ -2,6 +2,7 @@ import {
   Atom,
   Atoms,
   InferClassModel,
+  ManifestMode,
   ModelClass,
   Modelable,
   Quantum,
@@ -11,6 +12,9 @@ import {
   defineHook,
   handleHook,
   usingAtom,
+  usingChildConsumers,
+  usingMode,
+  usingProxyAtom,
 } from "@reconjs/recon"
 import { PropsWithChildren, Suspense } from "react"
 import { AnyFunction, guidBy, memoize } from "@reconjs/utils"
@@ -46,7 +50,14 @@ type StoreHook = (
   ...args: Atom <Modelable>[]
 ) => Atom
 
-const usingStore = defineHook <StoreHook> (() => {
+const usingStore = defineHook <StoreHook> ((factory: AnyFactory) => {
+  const mode = usingMode ()
+
+  if (mode === ManifestMode) {
+    usingChildConsumers (factory)
+    return usingProxyAtom ()
+  }
+  
   return usingAtom (() => {
     throw new Error ("[usingStore] not implemented")
   })

@@ -99,7 +99,9 @@ export async function preflush () {
   const self = ++flushCount
 
   // console.log ("[preflush] start", self)
+  let i = -1
   await susync (() => {
+    console.log ("preflushing...", self, ++i)
     loadPromise (curr)
     // loadPromise (curr)
   })
