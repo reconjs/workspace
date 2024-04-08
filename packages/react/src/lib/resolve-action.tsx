@@ -1,4 +1,15 @@
-import { Atom, InferClassModel, ModelClass, getDefinitionRef, handleHook, usingAtom, usingConstant, usingDefinedAction, usingDefinedEvent, usingHandler } from "@reconjs/recon"
+import {
+  Atom,
+  InferClassModel,
+  ModelClass,
+  getDefinitionRef,
+  handleHook,
+  usingAtom,
+  usingConstant,
+  usingDefinedAction,
+  usingDefinedEvent,
+  usingHandler,
+} from "@reconjs/recon"
 import { defineTraversal } from "./traverse"
 import { Serial, memoize, susync } from "@reconjs/utils"
 
