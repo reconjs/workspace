@@ -152,7 +152,7 @@ const handleServer = () => handleHook (usingServerAtom, (key, ...atoms) => {
     const scopes = getScopes ()
 
     const manifest = manifestBy (key).get ()
-    
+
     if (manifest.kind === "action") {
       return async () => {
         console.log ("action called: ", key)
@@ -205,31 +205,31 @@ const usingAction = defineHook <
 })
 
 function handleAction (handler: Fanc) {
-  const getSerializer = usingScopeSerializer ()
-  const contexts = usingStack ()
+  handleHook (usingAction, () => {
+    const getSerializer = usingScopeSerializer ()
+    const contexts = usingStack ()
 
-  const onAction = usingConstant (() => {
-    const getScopes = getSerializer (...contexts)
+    return usingConstant (() => {
+      const getScopes = getSerializer (...contexts)
 
-    return async (key: string, ...args: any[]) => {
-      const scopes = await susync (() => getScopes ())
+      return async (key: string, ...args: any[]) => {
+        const scopes = await susync (() => getScopes ())
 
-      const res = await handler ({
-        queries: [],
-        actions: [
-          {
-            key,
-            args,
-            scopes,
-          }
-        ],
-      })
+        const res = await handler ({
+          queries: [],
+          actions: [
+            {
+              key,
+              args,
+              scopes,
+            }
+          ],
+        })
 
-      // TODO: Invalidate/Revalidate
-    }
+        // TODO: Invalidate/Revalidate
+      }
+    })
   })
-
-  handleHook (usingAction, () => onAction)
 }
 
 
@@ -242,6 +242,7 @@ function usingHoistedStore (factory: Func, ...atoms: Atom[]) {
   })
 
   console.log ("[usingHoistedStore]", ...providers)
+  
   const ctx = usingContext (...providers)
   const context = clientContextOf (ctx)
 
