@@ -11,8 +11,6 @@ import {
 import { preflush, susync } from "@reconjs/utils"
 
 import { AnyViewDef, ReconProp } from "../types"
-import { usingQuery } from "../lib/using-query"
-import { defineTraversal } from "../lib/traverse"
 import { resolveQuery } from "../lib/resolve-query"
 
 type Props = Record <string, any> & {
