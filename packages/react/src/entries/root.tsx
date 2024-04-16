@@ -215,6 +215,7 @@ function handleAction (handler: Fanc) {
       return async (key: string, ...args: any[]) => {
         const scopes = await susync (() => getScopes ())
 
+        // TODO: Make this query elsewhere...
         const res = await handler ({
           queries: [],
           actions: [
