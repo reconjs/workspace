@@ -51,13 +51,6 @@ type StoreHook = (
 ) => Atom
 
 const usingStore = defineHook <StoreHook> ((factory: AnyFactory) => {
-  const mode = usingMode ()
-
-  if (mode === ManifestMode) {
-    usingChildConsumers (factory)
-    return usingProxyAtom ()
-  }
-  
   return usingAtom (() => {
     throw new Error ("[usingStore] not implemented")
   })
@@ -76,6 +69,15 @@ export function defineStore <F extends AnyFactory> (factory: F) {
   // TODO: Dispatcher
 
   const def: AnyAtomDef = (...args) => {
+    const mode = usingMode ()
+
+    // FIXME: This doesn't work.
+    if (mode === ManifestMode) {
+      console.log ("[usingStore] ManifestMode")
+      usingChildConsumers (factory)
+      return usingProxyAtom()
+    }
+
     return usingStore (factory, ...args)
   }
 
