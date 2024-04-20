@@ -13,7 +13,7 @@ export type { Place, PlaceSlug }
 export const asaPlace = defineModel (Place)
 export const asaPlaceSlug = defineModel (PlaceSlug)
 
-export const usingDefaultPlace = define (() => {
+export const usingDefaultPlace = defineSync (() => {
   return asaPlace (() => {
     throw new Error ("No Place")
   })

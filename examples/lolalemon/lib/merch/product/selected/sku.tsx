@@ -8,7 +8,7 @@ import {
 } from "../color"
 import { usingSelectedColor } from "./color/state"
 
-export const usingSelectedSku = define (() => {
+export const usingSelectedSku = defineSync (() => {
   const theColor = usingSelectedColor ()
 
   const theSkus = usingProductSkudatasByColor (theColor)

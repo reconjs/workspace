@@ -1,5 +1,5 @@
 import { defineView } from "@reconjs/react"
-import { define } from "@reconjs/core"
+import { defineSync } from "@reconjs/core"
 
 import { usingPlace } from "./model"
 import { usingPlaceName } from "./name"

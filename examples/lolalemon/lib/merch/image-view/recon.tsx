@@ -78,7 +78,7 @@ const usingStarButton = defineClientView (() => {
   }
 })
 
-const usingNoColor = define (() => {
+const usingNoColor = defineSync (() => {
   const asaColorMaybe = usingOptional (asaColor)
   return asaColorMaybe (() => {
     return null

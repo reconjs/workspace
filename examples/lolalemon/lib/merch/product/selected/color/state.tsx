@@ -5,7 +5,7 @@ import { usingColorsForProduct } from "../../color"
 
 import { usingColorSelector } from "./store"
 
-export const usingSelectedColor = define (() => {
+export const usingSelectedColor = defineSync (() => {
   const theProduct = usingProduct ()
   const theColorSelector = usingColorSelector ()
   const theColors = usingColorsForProduct (theProduct)

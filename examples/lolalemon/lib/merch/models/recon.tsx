@@ -27,7 +27,7 @@ export const asaSkudata = defineModel (Skudata)
 
 // Product Scope
 
-export const usingDefaultProduct = define (() => {
+export const usingDefaultProduct = defineSync (() => {
   const asaProductMaybe = usingOptional (asaProduct)
   return asaProductMaybe (() => {
     return null as any
@@ -42,7 +42,7 @@ export const mountProduct = defineScope (() => {
 
 // Color Scope
 
-export const usingDefaultColor = define (() => {
+export const usingDefaultColor = defineSync (() => {
   const asaColorMaybe = usingOptional (asaColor)
   return asaColorMaybe (() => {
     return null as any

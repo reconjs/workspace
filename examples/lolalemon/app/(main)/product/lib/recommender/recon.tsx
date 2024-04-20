@@ -5,7 +5,7 @@ import { Suspense } from "react"
 
 import { asaProduct, usingProductCard } from "@/lib/merch"
 
-const usingRecommendations = define (() => {
+const usingRecommendations = defineSync (() => {
   const asa = usingCollection (asaProduct)
 
   return asa (() => {

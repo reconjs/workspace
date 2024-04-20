@@ -16,7 +16,7 @@ import { susync } from "@reconjs/utils"
 type AnyFactory <T = any> = (...args: Modelable[]) => () => T
 type AnyAtomDef = (...args: Atoms) => Atom
 
-export function define <
+export function defineSync <
   F extends AnyFactory <Atomizable>,
   T extends Atomizable = ReturnType <ReturnType <F>>
 > (factory: F) {

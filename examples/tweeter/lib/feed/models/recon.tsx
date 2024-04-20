@@ -16,7 +16,7 @@ export const asPost = defineModel (Post)
 
 // Feed Scope
 
-const usingDefaultFeed = define (() => {
+const usingDefaultFeed = defineSync (() => {
   const asFeedMaybe = usingOptional (asFeed)
   return asFeedMaybe (() => null)
 })
@@ -27,7 +27,7 @@ export const mountFeed = defineScope (() => {
 
 // Post Scope
 
-const usingDefaultPost = define (() => {
+const usingDefaultPost = defineSync (() => {
   return asPost (() => {
     throw new Error ("No default post")
   })

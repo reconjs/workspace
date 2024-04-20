@@ -9,7 +9,7 @@ export const {
 )
 
 /*
-export const usingPlaceName = define ((arg: Place) => {
+export const usingPlaceName = defineSync ((arg: Place) => {
   const thePlace = usingPlace () // asaPlace (arg)
 
   return () => {
