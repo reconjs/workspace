@@ -1,17 +1,18 @@
-import { AnyFunction, memoize, uniq } from "@reconjs/utils"
+import { AnyFunction, memoize } from "@reconjs/utils"
 import { getInstructions } from "./instructions"
 import { ReconProvider } from "../providers"
 
-export const getScopes = memoize ((factory: AnyFunction) => {
-  const instructions = getInstructions (factory)
+/**
+ * Give me a list of the unique scopes for this definition.
+ */
+export const getScopes = memoize ((self: AnyFunction) => {
+  const instructions = getInstructions (self)
 
   const scopes = new Set <ReconProvider> ()
 
-  for (const instruction of instructions) {
-    const { scope } = instruction.meta.scope
-    if (scope) scopes.add (scope)
-
-    getScopes (instruction.factory).forEach (scopes.add)
+  for (const { hook, consumes } of instructions) {
+    if (consumes) scopes.add (consumes)
+    if (hook) getScopes (hook).forEach (scopes.add)
   }
 
   return Array.from (scopes)

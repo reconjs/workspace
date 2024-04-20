@@ -9,9 +9,10 @@ export type InstructionArg = {
 }
 
 export type Instruction = {
-  factory: AnyFunction,
+  hook?: AnyFunction,
   args: InstructionArg[],
-  returns?: "atom",
+  provides: ReconProvider,
+  consumes: ReconProvider,
   meta: any,
 }
 
