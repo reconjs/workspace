@@ -28,7 +28,7 @@ function BuyButton () { return null }
 export default defineView (() => {
   const theProduct = usingProduct()
 
-  const ColorPicker = usingColorPicker ()
+  // const ColorPicker = usingColorPicker ()
   // const Pickers = usingAttributePickers ()
   const ProductImage = usingProductImage ()
   const BuyButton = usingBuyButton ()
