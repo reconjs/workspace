@@ -27,7 +27,7 @@ export { usingAtom, handleAtoms } from "./atom"
 
 export {
   usingBroadlyAux,
-  usingDefined,
+  usingDefinedSync,
   usingDefinedAsync,
   usingDefinedAction,
   usingDefinedEvent,

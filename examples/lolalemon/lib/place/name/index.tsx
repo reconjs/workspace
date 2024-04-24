@@ -1,4 +1,4 @@
-import { define, viaServer } from "@reconjs/core"
+import { defineSync, viaServer } from "@reconjs/core"
 import { Place, asaPlace, usingPlace } from "../model"
 
 export const {

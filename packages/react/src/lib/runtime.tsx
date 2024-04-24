@@ -15,7 +15,7 @@ import {
   ReconContext,
   usingBroadlyAux,
   usingAtom,
-  usingDefined,
+  usingDefinedSync,
   usingDefinedAsync,
   MANIFESTS,
   setServerPreloader,
@@ -135,7 +135,7 @@ export function deserializeNode (serialized: SerializedNode) {
 
     handleSerialized ()
 
-    handleHook (usingDefined, usingDefined_default)
+    handleHook (usingDefinedSync, usingDefined_default)
     handleHook (usingDefinedAsync, usingDefinedAsync_default)
     
     handleServer ()

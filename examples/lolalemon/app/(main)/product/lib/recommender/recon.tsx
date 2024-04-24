@@ -1,4 +1,4 @@
-import { define, usingCollection } from "@reconjs/core"
+import { defineSync, usingCollection } from "@reconjs/core"
 import { defineView, usingListView } from "@reconjs/react"
 import { ErrorBoundary } from "@reconjs/utils-react"
 import { Suspense } from "react"

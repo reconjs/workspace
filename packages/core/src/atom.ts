@@ -7,7 +7,7 @@ import {
   getProviderKey,
   manifestBy,
   registerDefinition,
-  usingDefined,
+  usingDefinedSync,
   usingDefinedAsync,
   usingServerAtom
 } from "@reconjs/recon"
@@ -23,7 +23,7 @@ export function defineSync <
   type A = Atoms <Parameters <F>>
 
   const def: AnyAtomDef = (...args) => {
-    return usingDefined (factory, ...args)
+    return usingDefinedSync (factory, ...args)
   }
 
   return def as unknown as (...args: A) => Atom <T>

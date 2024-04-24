@@ -1,7 +1,7 @@
 import {
   Model,
   Optional,
-  define,
+  defineSync,
   defineModel,
   defineScope,
   usingOptional,

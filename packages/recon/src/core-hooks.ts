@@ -14,7 +14,7 @@ function def <T extends AnyFunction> () {
   return defineHook <T> (body as any)
 }
 
-export const usingDefined = def <(
+export const usingDefinedSync = def <(
   factory: AnyFactory <Atomizable>, 
   ...args: Atoms
 ) => Atom> ()

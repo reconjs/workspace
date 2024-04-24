@@ -16,7 +16,7 @@ import { usingAtom } from "./atom"
 import { ReconProvider, usingProvided } from "./providers"
 import {
   usingBroadlyAux,
-  usingDefined,
+  usingDefinedSync,
   usingDefinedAction,
   usingDefinedAsync,
   usingDefinedEvent,
@@ -91,7 +91,7 @@ const getNode = memoize ((self: AnyFunction) => {
     handleHook (usingMode, () => ManifestMode)
     handleHook (usingConsumerSet, () => consumers)
 
-    handleHook (usingDefined, (factory) => {
+    handleHook (usingDefinedSync, (factory) => {
       usingChildConsumers (factory)
       return usingProxyAtom ()
     })

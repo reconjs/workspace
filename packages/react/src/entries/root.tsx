@@ -20,7 +20,7 @@ import {
   Modelable,
   defineHook,
   usingStack,
-  usingDefined,
+  usingDefinedSync,
   manifestBy,
   usingDefinedEvent,
   getConsumers,
@@ -326,7 +326,7 @@ const getRootPromise = memoize ((id: string) => {
     handleStore (usingHoisted)
     handleSsrHack ()
     
-    handleHook (usingDefined, (factory, ...args) => {
+    handleHook (usingDefinedSync, (factory, ...args) => {
       // if (isBrowser()) return usingHoisted (factory, ...args)
       return usingDefined_default (factory, ...args)
     })

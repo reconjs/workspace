@@ -1,6 +1,6 @@
 import { ErrorBoundary, useEvent } from "@reconjs/utils-react"
 import { Suspense } from "react"
-import { define, usingOptional } from "@reconjs/core"
+import { defineSync, usingOptional } from "@reconjs/core"
 import { StarIcon as StarOutlineIcon } from "@heroicons/react/24/outline"
 import { StarIcon } from "@heroicons/react/20/solid"
 import {

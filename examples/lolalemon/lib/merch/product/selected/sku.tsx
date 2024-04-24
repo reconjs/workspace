@@ -1,4 +1,4 @@
-import { define, usingBroadly, usingOptional } from "@reconjs/core"
+import { defineSync, usingBroadly, usingOptional } from "@reconjs/core"
 import { defineStore, usingSsrHack, viaClientHooks } from "@reconjs/react"
 
 import { asaSkudata, usingProduct } from "../../models"

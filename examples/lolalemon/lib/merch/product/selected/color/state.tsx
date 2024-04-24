@@ -1,4 +1,4 @@
-import { define, usingBroadly } from "@reconjs/core"
+import { defineSync, usingBroadly } from "@reconjs/core"
 
 import { usingProduct } from "../../../models"
 import { usingColorsForProduct } from "../../color"
