@@ -20,6 +20,7 @@ Currently, this library isn't being published because it doesn't work yet.
 `examples/hello-world` is the simplest.
 
 `examples/lolalemon` will demonstrate how this scales to a real use case.
+- More specifically, go to the product page: `/product/align-25`
 
 ## Packages
 
