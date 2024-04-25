@@ -1,3 +1,15 @@
+import { define, ModelClass } from "@reconjs/recon"
+
+
+
+export default function recon (key: string) {
+  return define
+}
+
+
+
+// Legacy
+
 export { Model } from "@reconjs/recon"
 
 export type { Collection, Optional } from "./adapters"
