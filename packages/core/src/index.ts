@@ -1,4 +1,4 @@
-import { define, ModelClass } from "@reconjs/recon"
+import { define } from "@reconjs/recon"
 
 
 

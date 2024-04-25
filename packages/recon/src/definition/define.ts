@@ -1,7 +1,7 @@
 import { Func } from "@reconjs/utils"
 import { defineHook, isReconRunning } from "../hooks"
 import { prepassOf, usingPrepasser } from "./prepass"
-import { Model, ModelClass, Modeled } from "../models"
+import { ModelClass, Modeled } from "../models"
 import { Atomizable, InferAtomizableType } from "../atom"
 
 export const usingDefined = defineHook ((self: Func, ...args: any[]) => {
@@ -23,16 +23,24 @@ export interface Recon <T extends Atomizable> extends ReconRef <T> {
   (): InferAtomizableType <T>,
 }
 
-type InferReconType <T> = T extends ReconType <infer M> ? M : never
-
-interface ReconConstructor <A extends Atomizable[]> {
-  <F extends (...args: {
-    [K in keyof A]: Recon <A[K]>
-  }) => any>(): ReturnType <F>
+export interface ReconResult <T = any> {
+  __RECON__: "result",
+  (): T,
 }
 
-interface ReconDefine extends ReconConstructor <[]> {
-  <A extends ReconType[]>(...args: A): ReconConstructor <{
+type InferReconType <T> = T extends ReconType <infer M> ? M : never
+
+interface ReconConstructorAux <
+  A extends Atomizable[],
+  P extends Recon<Atomizable>[] = {
+    [K in keyof A]: Recon <A[K]>
+  }
+> {
+  <F extends (...args: P) => any> (): ReturnType <F>
+}
+
+interface ReconConstructor extends ReconConstructorAux <[]> {
+  <A extends ReconType[]> (...args: A): ReconConstructorAux <{
     [K in keyof A]: InferReconType <A[K]>
   }>
 }
@@ -56,7 +64,7 @@ function defineAux (factory: Func, types: ReconType[]) {
   }
 }
 
-export const define: ReconDefine = (...args: any[]) => {
+function define (...args: any[]) {
   if (args.length === 0) {
     throw new Error ("[recon] define requires an argument")
   }
@@ -64,6 +72,9 @@ export const define: ReconDefine = (...args: any[]) => {
   const isReconType = (x: any) => x.__RECON__ === "type"
 
   // TODO: check if all arguments are ReconTypes
+  if (args.every (isReconType)) {
+    return (fn: Func) => defineAux (fn, args)
+  }
 
   if (args.length > 1) {
     throw new Error (
@@ -80,3 +91,5 @@ export const define: ReconDefine = (...args: any[]) => {
 
   throw new Error ("[recon] define does not accept these arguments")
 }
+
+export default define as ReconConstructor
