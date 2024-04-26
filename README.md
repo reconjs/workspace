@@ -6,9 +6,13 @@ we want to make it possible to compose entire full-stack applications.
 There are no devtool plugins but a bundler does need
 to be configured to create client and server bundles.
 
+
+
 ## Getting Started
 
 Currently, this library isn't being published because it doesn't work yet.
+
+[LEARN API HERE](https://github.com/reconjs/workspace/discussions/3)
 
 ### How do I navigate the repo?
 
