@@ -1,13 +1,15 @@
-import $$ from "@reconjs/core"
-import { View$ } from "@reconjs/react"
+// import recon from "@reconjs/core"
+import { defineView } from "@reconjs/react"
 import { PropsWithChildren } from "react"
 
-const $ = $$("@/app/lib/layout")
+// const $ = recon ("@/app/lib/layout")
 
-export default $(() => {
-  return View$((props: PropsWithChildren <{}>) => (
+type Props = PropsWithChildren <{}>
+
+export default defineView (() => {
+  return (props: Props) => (
     <main>
       {props.children}
     </main>
-  ))
+  )
 })

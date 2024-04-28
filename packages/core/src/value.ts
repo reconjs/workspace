@@ -1,23 +1,22 @@
-import { Recon, ReconResult, isReconRunning } from "@reconjs/recon"
+import { Recon, ReconHook, isReconRunning } from "@reconjs/recon"
 
 export function Value$ <
   F extends () => any
-> (factory: F) {
+> (resolve: F) {
   type T = ReturnType <F>
-  type R = ReconResult <Recon <T>>
+  type R = ReconHook <Recon <T>>
 
   // TODO: Get the instructions from define.
 
-  function ReconValue (...args: any[]) {
-    if (!isReconRunning ()) {
-      throw new Error ("[Value$] cannot be called outside of a Recon context.")
-    }
-
+  const res: Partial <R> = () => {
     // TODO: Default behavior.
-  }
+    const instructions = []
 
-  const res: Partial <R> = ReconValue.bind (null)
-  res.__RECON__ = "result"
+    return function resolveValue$ (...args: any[]) {
+
+    }
+  }
+  res.__RECON__ = "hook"
 
   return res as R
 }

@@ -1,67 +1,37 @@
-export class ReconGlobalRef {}
+import { Atomizable, InferAtomizableType } from "../atom"
+import { ModelClass, Modeled } from "../models"
 
-export class ReconModel <T> {}
-
-
-
-export class ReconLocalRef {}
-
-
-
-export class ReconSignal extends ReconLocalRef {
-  constructor () {
-    super ()
-  }
+export type ReconType <M extends Modeled = Modeled> = {
+  __RECON__: "type",
+  (): ModelClass <M>,
 }
 
-
-
-export class ReconInstruction {
-  private self: {
-    definition: ReconDefinition,
-    parameters: ReconSignal[],
-  }
-
-  constructor (self: {
-    definition: ReconDefinition,
-    parameters: ReconSignal[],
-  }) {
-    this.self = { ...self }
-  }
-
-  get definition () {
-    return this.self.definition
-  }
-
-  get parameters () {
-    return this.self.parameters
-  }
+export type ReconResolver <T = any> = {
+  __RECON__: "resolver",
+  (...args: any[]): T,
 }
 
-
-
-export class ReconDefinition {
-  private self: {
-    instructions: ReconInstruction[],
-  }
-
-  constructor (self: {
-    instructions: ReconInstruction[],
-  }) {
-    this.self = { ...self }
-
-    this.invoke = this.invoke.bind (this)
-  }
-
-  // Accessors
-
-  get connections () {
-    return this.self.connections
-  }
-
-  // Methods
-
-  invoke (...args: any[]) {
-    throw new Error ("ReconDefinition::invoke must be overloaded")
-  }
+export type Recon <T extends Atomizable = Atomizable> = {
+  __RECON__: "local",
+  (): InferAtomizableType <T>,
 }
+
+export type ReconHook <T = any> = {
+  __RECON__: "hook",
+  resolver: ReconResolver,
+  factory: () => T,
+  (): T,
+}
+
+export type ReconConstant <T = any> = {
+  __RECON__: "constant",
+  resolver: ReconResolver,
+  (): T,
+}
+
+export type Reconic = {
+  __RECON__: string,
+  (): any,
+}
+
+export type InferReconType <T> = T extends ReconType <infer M> ? M : never

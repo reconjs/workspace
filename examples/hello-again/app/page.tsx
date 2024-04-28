@@ -1,6 +1,5 @@
-import { viaRender } from "@reconjs/react"
-import { withRoute } from "./recon/router"
+import Page from "./lib/page"
 
-const Page = viaRender (() => import ("./lib/page"))
-
-export default withRoute (Page)
+export default function RootPage () {
+  return <Page />
+}
