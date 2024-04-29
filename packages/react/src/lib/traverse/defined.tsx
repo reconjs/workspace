@@ -8,7 +8,7 @@ import {
   usingBroadlyAux,
   usingChild,
   usingConstant,
-  usingDefined,
+  usingDefinedSync,
   usingDefinedAction,
   usingDefinedAsync,
   usingDefinedEvent,
@@ -47,7 +47,7 @@ function createModeled <M extends ModelClass> (
 }
 
 export const handleDefined = () => {
-  handleHook (usingDefined, (fn, ...args) => {
+  handleHook (usingDefinedSync, (fn, ...args) => {
     for (const atom of args) {
       if (atom.__RECON__ !== "atom") {
         throw new Error ("[handleDefined] args must be atoms")

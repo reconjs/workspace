@@ -1,3 +1,4 @@
+export * from "./revised"
 
 export { defineStore } from "./define-store"
 export { defineView, defineClientView } from "./define-view"

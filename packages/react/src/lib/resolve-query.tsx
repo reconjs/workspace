@@ -121,7 +121,7 @@ export async function resolveQuery (params: ResolveParams) {
       console.log ("usingServerAtom")
       const hook = getImport (key)
 
-      const manifest = manifestBy (key).read ()
+      const manifest = manifestBy (key).get ()
 
       const atom = hook (...atoms)
 

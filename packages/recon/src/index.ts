@@ -1,4 +1,5 @@
 export * from "./hooks"
+export * from "./definition"
 
 export * from "./preloader"
 
@@ -27,13 +28,20 @@ export { usingAtom, handleAtoms } from "./atom"
 
 export {
   usingBroadlyAux,
-  usingDefined,
+  usingDefinedSync,
   usingDefinedAsync,
   usingDefinedAction,
   usingDefinedEvent,
   usingServerAtom,
   usingServerImport,
 } from "./core-hooks"
+
+export {
+  getConsumers,
+  ManifestMode,
+  usingChildConsumers,
+  usingProxyAtom,
+} from "./get-consumers"
 
 export type { Manifest } from "./manifest"
 export { MANIFESTS, manifestBy } from "./manifest"

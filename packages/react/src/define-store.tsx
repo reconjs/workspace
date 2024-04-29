@@ -2,6 +2,7 @@ import {
   Atom,
   Atoms,
   InferClassModel,
+  ManifestMode,
   ModelClass,
   Modelable,
   Quantum,
@@ -11,9 +12,16 @@ import {
   defineHook,
   handleHook,
   usingAtom,
+  usingChildConsumers,
+  usingMode,
+  usingProxyAtom,
 } from "@reconjs/recon"
 import { PropsWithChildren, Suspense } from "react"
-import { AnyFunction, guidBy, memoize } from "@reconjs/utils"
+import { 
+  AnyFunction, 
+  guidBy, 
+  memoize, 
+} from "@reconjs/utils"
 import {
   ErrorBoundary,
   useInitial,
@@ -22,7 +30,10 @@ import {
   useMemoDeep,
 } from "@reconjs/utils-react"
 
-import { ClientContext, clientContextOf } from "./lib/client-context"
+import { 
+  ClientContext, 
+  clientContextOf, 
+} from "./lib/client-context"
 
 type AnyAtomDef = (...args: Atoms) => Atom
 type AnyFactory <T = any> = (...args: Modelable[]) => () => T
@@ -46,7 +57,7 @@ type StoreHook = (
   ...args: Atom <Modelable>[]
 ) => Atom
 
-const usingStore = defineHook <StoreHook> (() => {
+const usingStore = defineHook <StoreHook> ((factory: AnyFactory) => {
   return usingAtom (() => {
     throw new Error ("[usingStore] not implemented")
   })
@@ -65,6 +76,15 @@ export function defineStore <F extends AnyFactory> (factory: F) {
   // TODO: Dispatcher
 
   const def: AnyAtomDef = (...args) => {
+    const mode = usingMode ()
+
+    // FIXME: This doesn't work.
+    if (mode === ManifestMode) {
+      console.log ("[usingStore] ManifestMode")
+      usingChildConsumers (factory)
+      return usingProxyAtom()
+    }
+
     return usingStore (factory, ...args)
   }
 
@@ -132,6 +152,7 @@ export function ReconStoreProvider (props: Props) {
   const { read, subscribe } = context.source
   const metastored = useSyncExternalStore (subscribe, read, read)
 
+  /*
   console.log ("ReconStoreProvider", context)
 
   useEffect (() => {
@@ -140,6 +161,7 @@ export function ReconStoreProvider (props: Props) {
       console.log ("ReconStoreProvider unmounting...")
     }
   }, [])
+  */
 
   // TODO: A more sophisticated key process
   const els = metastored.map ((m) => {

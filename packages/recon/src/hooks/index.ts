@@ -5,6 +5,7 @@ export {
 export type { ReconNode } from "./node"
 
 export {
+  isReconRunning,
   createNode,
   createRoot,
   usingChild,

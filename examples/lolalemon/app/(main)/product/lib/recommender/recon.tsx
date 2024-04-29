@@ -1,11 +1,11 @@
-import { define, usingCollection } from "@reconjs/core"
+import { defineSync, usingCollection } from "@reconjs/core"
 import { defineView, usingListView } from "@reconjs/react"
 import { ErrorBoundary } from "@reconjs/utils-react"
 import { Suspense } from "react"
 
 import { asaProduct, usingProductCard } from "@/lib/merch"
 
-const usingRecommendations = define (() => {
+const usingRecommendations = defineSync (() => {
   const asa = usingCollection (asaProduct)
 
   return asa (() => {

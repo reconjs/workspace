@@ -1,27 +1,31 @@
 import {
-  ReconProvider,
-  createNode,
-  createRoot,
-  handleHook,
-  usingAtom,
-  usingBroadlyAux,
-  usingChild,
-  usingConstant,
-  usingDefined,
-  usingDefinedAction,
-  usingDefinedAsync,
-  usingDefinedEvent,
-  usingProvided,
-  usingServerAtom,
-  usingServerImport,
-} from "@reconjs/recon"
-import {
   AnyFunction,
   loadPromise, 
   memoize, 
-  susync
+  preflush, 
+  susync,
 } from "@reconjs/utils"
-import { handleStore } from "../define-store"
+import { 
+  createRoot, 
+  defineHook, 
+  handleHook, 
+  usingChild, 
+  usingConstant,
+} from "./hooks"
+import { usingAtom } from "./atom"
+import { ReconProvider, usingProvided } from "./providers"
+import {
+  usingBroadlyAux,
+  usingDefinedSync,
+  usingDefinedAction,
+  usingDefinedAsync,
+  usingDefinedEvent,
+  usingServerAtom,
+  usingServerImport,
+} from "./core-hooks"
+import { ReconMode, usingMode } from "./mode"
+
+export class ManifestMode extends ReconMode {}
 
 function usingRef <T = any> () {
   return usingConstant (() => ({
@@ -40,7 +44,7 @@ function usingFunction <T> (factory: () => T): () => T {
 
 
 
-function usingProxyAtom () {
+export function usingProxyAtom () {
   return usingAtom (() => {
     // noop
   })
@@ -53,7 +57,26 @@ const MODEL = {
   }
 }
 
-const MODELS = [ MODEL, MODEL, MODEL]
+const MODELS = [ MODEL, MODEL, MODEL ]
+
+// Consumers
+
+const usingConsumerSet = defineHook ((): Set <ReconProvider> => {
+  throw new Error ("[usingConsumerSet] not implemented")
+})
+
+export function usingChildConsumers (factory: AnyFunction) {
+  const consumers = usingConsumerSet ()
+
+  usingConstant (() => {
+    const list = getConsumers (factory)
+    for (const item of list) {
+      consumers.add (item)
+    }
+  })
+}
+
+// Runners
 
 const getRoot = memoize ((_: AnyFunction) => {
   return createRoot ()
@@ -64,17 +87,11 @@ const getNode = memoize ((self: AnyFunction) => {
 
   const consumers = new Set <ReconProvider> ()
 
-  function usingChildConsumers (factory: AnyFunction) {
-    usingConstant (() => {
-      const list = getConsumers (factory)
-      for (const item of list) {
-        consumers.add (item)
-      }
-    })
-  }
-
   return root.exec (() => {
-    handleHook (usingDefined, (factory) => {
+    handleHook (usingMode, () => ManifestMode)
+    handleHook (usingConsumerSet, () => consumers)
+
+    handleHook (usingDefinedSync, (factory) => {
       usingChildConsumers (factory)
       return usingProxyAtom ()
     })
@@ -115,11 +132,6 @@ const getNode = memoize ((self: AnyFunction) => {
       return usingProxyAtom ()
     })
 
-    handleStore (() => {
-      usingChildConsumers (self)
-      return usingProxyAtom ()
-    })
-
     return [
       usingChild (),
       () => Array.from (consumers.values())
@@ -131,9 +143,11 @@ const getPromise = memoize (async (factory) => {
   console.log ("getting consumers...")
 
   const [ node, read ] = await susync (() => getNode (factory))
+
   await node.susync (() => {
     factory (...MODELS)
   })
+
   return read ()
 })
 

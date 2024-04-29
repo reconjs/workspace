@@ -11,6 +11,11 @@ function debugOf (x: any, next?: string): string|undefined {
 
 let current: ReconStep|undefined
 
+export function isReconRunning () {
+  return !!current
+}
+
+
 const NEVER: any = {
   __RECON__: "never"
 }
@@ -208,6 +213,7 @@ export function usingHandler <T extends AnyFunction> (hook: T) {
 
 
 // Begin & End
+// TODO: Are these even necessary anymore?
 
 export function usingBeginEffect (effect: () => void) {
   const begin = usingBegin ()

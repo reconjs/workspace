@@ -1,4 +1,4 @@
-import { define } from "@reconjs/core"
+import { defineSync } from "@reconjs/core"
 import {
   defineStore,
   usingSsrHack,
@@ -9,7 +9,7 @@ import {
 const { useState } = viaClientHooks (() => import ("react"))
 
 // We can define values synchronously
-const usingInitialCount = define (() => {
+const usingInitialCount = defineSync (() => {
   return () => {
     return 0
   }

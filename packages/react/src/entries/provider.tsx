@@ -1,6 +1,6 @@
 "use client"
 
-import { PropsWithChildren, useEffect, useId } from "react"
+import { PropsWithChildren, useId } from "react"
 import {
   Atom,
   MANIFESTS,
@@ -15,14 +15,18 @@ import {
   usingContext,
   usingStack,
 } from "@reconjs/recon"
-import { useInitial, useMemoDeep, useUpdateEffect } from "@reconjs/utils-react"
+import { 
+  useInitial, 
+  useMemoDeep, 
+  useUpdateEffect, 
+} from "@reconjs/utils-react"
 import { Serial, memoize, range } from "@reconjs/utils"
 
 import {
   RuntimeContext,
   useReconRuntime,
 } from "../client/runtime-context"
-import { handleDepository, usingDepository } from "../lib/depository"
+import { usingDepository } from "../lib/depository"
 
 import { ReconStoreProvider } from "../define-store"
 
@@ -121,7 +125,7 @@ function useManifestSync (manifests = EMPTY_MANIFEST) {
 }
 
 export function ReconRuntimeProvider (props: Props) {
-  console.log ("ReconRuntimeProvider", props.runtime)
+  // console.log ("ReconRuntimeProvider", props.runtime)
 
   useInitial (() => {
     if (++initCount > 100) {
@@ -144,6 +148,7 @@ export function ReconRuntimeProvider (props: Props) {
   const { scoped, contexts } = getScopedNode (id, parent, scopes)
   const node = getDataNode (id, scoped, data)
 
+  /*
   console.log ("[ReconRuntimeProvider]", { contexts })
   useEffect (() => {
     console.log ("[ReconRuntimeProvider] mounted")
@@ -151,6 +156,7 @@ export function ReconRuntimeProvider (props: Props) {
       console.log ("[ReconRuntimeProvider] unmounting...")
     }
   }, [])
+  */
 
   const _contexts = useMemoDeep (() => contexts, [ contexts ])
   useUpdateEffect (() => {

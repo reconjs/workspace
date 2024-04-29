@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "nx dev hello-world",
+    "hello-again": "nx dev hello-again",
     "lolalemon": "nx dev lolalemon",
     "tweeter": "nx dev tweeter"
   },

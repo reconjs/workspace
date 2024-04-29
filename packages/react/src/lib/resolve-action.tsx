@@ -1,4 +1,15 @@
-import { Atom, InferClassModel, ModelClass, getDefinitionRef, handleHook, usingAtom, usingConstant, usingDefinedAction, usingDefinedEvent, usingHandler } from "@reconjs/recon"
+import {
+  Atom,
+  InferClassModel,
+  ModelClass,
+  getDefinitionRef,
+  handleHook,
+  usingAtom,
+  usingConstant,
+  usingDefinedAction,
+  usingDefinedEvent,
+  usingHandler,
+} from "@reconjs/recon"
 import { defineTraversal } from "./traverse"
 import { Serial, memoize, susync } from "@reconjs/utils"
 
@@ -79,7 +90,13 @@ export async function resolveActions (...actions: ActionSpec[]) {
       try {
         const args: any[] = action.args.map (createValueAtom)
         const hook = getDefinitionRef (action.key)
-        await start (hook, [], ...args)
+
+        if (!action.scopes) throw new Error ("action must have scopes...")
+
+        const scopes = Object.entries (action.scopes)
+          .map (([ key, value ]) => ({ key, value }))
+
+        await start (hook, scopes, ...args)
       }
       catch (thrown) {
         if (thrown instanceof Promise) {

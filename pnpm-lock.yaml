@@ -26,12 +26,128 @@ importers:
       '@types/uuid':
         specifier: ^9.0.6
         version: 9.0.6
+      eslint:
+        specifier: ^8.52.0
+        version: 8.52.0
+      eslint-config-next:
+        specifier: latest
+        version: 14.2.2(eslint@8.52.0)(typescript@5.2.2)
       next:
         specifier: ^14.0.3
         version: 14.0.3(react-dom@18.2.0)(react@18.2.0)
       nx:
         specifier: ^17.0.2
         version: 17.0.2
+      typescript:
+        specifier: ^5.2.2
+        version: 5.2.2
+
+  examples/hello-again:
+    dependencies:
+      '@headlessui/react':
+        specifier: ^1.7.17
+        version: 1.7.17(react-dom@18.2.0)(react@18.2.0)
+      '@heroicons/react':
+        specifier: ^2.0.18
+        version: 2.0.18(react@18.2.0)
+      '@reconjs/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@reconjs/next':
+        specifier: workspace:*
+        version: link:../../packages/next
+      '@reconjs/react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@reconjs/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      '@reconjs/utils-react':
+        specifier: workspace:*
+        version: link:../../packages/utils-react
+      '@reconjs/utils-server':
+        specifier: workspace:*
+        version: link:../../packages/utils-server
+      next:
+        specifier: ^14.0.3
+        version: 14.1.1(react-dom@18.2.0)(react@18.2.0)
+      react:
+        specifier: ^18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.2.0(react@18.2.0)
+    devDependencies:
+      autoprefixer:
+        specifier: ^10.4.16
+        version: 10.4.16(postcss@8.4.31)
+      eslint:
+        specifier: ^8.52.0
+        version: 8.52.0
+      eslint-config-next:
+        specifier: latest
+        version: 14.2.2(eslint@8.52.0)(typescript@5.2.2)
+      postcss:
+        specifier: ^8.4.31
+        version: 8.4.31
+      tailwindcss:
+        specifier: ^3.3.5
+        version: 3.3.5
+      typescript:
+        specifier: ^5.2.2
+        version: 5.2.2
+
+  examples/hello-world:
+    dependencies:
+      '@headlessui/react':
+        specifier: ^1.7.17
+        version: 1.7.17(react-dom@18.2.0)(react@18.2.0)
+      '@heroicons/react':
+        specifier: ^2.0.18
+        version: 2.0.18(react@18.2.0)
+      '@reconjs/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@reconjs/next':
+        specifier: workspace:*
+        version: link:../../packages/next
+      '@reconjs/react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@reconjs/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      '@reconjs/utils-react':
+        specifier: workspace:*
+        version: link:../../packages/utils-react
+      '@reconjs/utils-server':
+        specifier: workspace:*
+        version: link:../../packages/utils-server
+      next:
+        specifier: ^14.0.3
+        version: 14.1.1(react-dom@18.2.0)(react@18.2.0)
+      react:
+        specifier: ^18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.2.0(react@18.2.0)
+    devDependencies:
+      autoprefixer:
+        specifier: ^10.4.16
+        version: 10.4.16(postcss@8.4.31)
+      eslint:
+        specifier: ^8.52.0
+        version: 8.52.0
+      eslint-config-next:
+        specifier: latest
+        version: 14.2.2(eslint@8.52.0)(typescript@5.2.2)
+      postcss:
+        specifier: ^8.4.31
+        version: 8.4.31
+      tailwindcss:
+        specifier: ^3.3.5
+        version: 3.3.5
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
@@ -81,6 +197,61 @@ importers:
       eslint-config-next:
         specifier: latest
         version: 14.1.4(eslint@8.52.0)(typescript@5.2.2)
+      postcss:
+        specifier: ^8.4.31
+        version: 8.4.31
+      tailwindcss:
+        specifier: ^3.3.5
+        version: 3.3.5
+      typescript:
+        specifier: ^5.2.2
+        version: 5.2.2
+
+  examples/tweeter:
+    dependencies:
+      '@headlessui/react':
+        specifier: ^1.7.17
+        version: 1.7.17(react-dom@18.2.0)(react@18.2.0)
+      '@heroicons/react':
+        specifier: ^2.0.18
+        version: 2.0.18(react@18.2.0)
+      '@reconjs/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@reconjs/next':
+        specifier: workspace:*
+        version: link:../../packages/next
+      '@reconjs/react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@reconjs/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      '@reconjs/utils-react':
+        specifier: workspace:*
+        version: link:../../packages/utils-react
+      '@reconjs/utils-server':
+        specifier: workspace:*
+        version: link:../../packages/utils-server
+      next:
+        specifier: ^14.0.3
+        version: 14.1.1(react-dom@18.2.0)(react@18.2.0)
+      react:
+        specifier: ^18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.2.0(react@18.2.0)
+    devDependencies:
+      autoprefixer:
+        specifier: ^10.4.16
+        version: 10.4.16(postcss@8.4.31)
+      eslint:
+        specifier: ^8.52.0
+        version: 8.52.0
+      eslint-config-next:
+        specifier: latest
+        version: 14.2.2(eslint@8.52.0)(typescript@5.2.2)
       postcss:
         specifier: ^8.4.31
         version: 8.4.31
@@ -381,6 +552,12 @@ packages:
 
   /@next/eslint-plugin-next@14.1.4:
     resolution: {integrity: sha512-n4zYNLSyCo0Ln5b7qxqQeQ34OZKXwgbdcx6kmkQbywr+0k6M3Vinft0T72R6CDAcDrne2IAgSud4uWCzFgc5HA==}
+    dependencies:
+      glob: 10.3.10
+    dev: true
+
+  /@next/eslint-plugin-next@14.2.2:
+    resolution: {integrity: sha512-q+Ec2648JtBpKiu/FSJm8HAsFXlNvioHeBCbTP12T1SGcHYwhqHULSfQgFkPgHDu3kzNp2Kem4J54bK4rPQ5SQ==}
     dependencies:
       glob: 10.3.10
     dev: true
@@ -1498,6 +1675,31 @@ packages:
         optional: true
     dependencies:
       '@next/eslint-plugin-next': 14.1.4
+      '@rushstack/eslint-patch': 1.5.1
+      '@typescript-eslint/parser': 6.9.1(eslint@8.52.0)(typescript@5.2.2)
+      eslint: 8.52.0
+      eslint-import-resolver-node: 0.3.9
+      eslint-import-resolver-typescript: 3.6.1(@typescript-eslint/parser@6.9.1)(eslint-import-resolver-node@0.3.9)(eslint-plugin-import@2.29.0)(eslint@8.52.0)
+      eslint-plugin-import: 2.29.0(@typescript-eslint/parser@6.9.1)(eslint-import-resolver-typescript@3.6.1)(eslint@8.52.0)
+      eslint-plugin-jsx-a11y: 6.7.1(eslint@8.52.0)
+      eslint-plugin-react: 7.33.2(eslint@8.52.0)
+      eslint-plugin-react-hooks: 4.6.0(eslint@8.52.0)
+      typescript: 5.2.2
+    transitivePeerDependencies:
+      - eslint-import-resolver-webpack
+      - supports-color
+    dev: true
+
+  /eslint-config-next@14.2.2(eslint@8.52.0)(typescript@5.2.2):
+    resolution: {integrity: sha512-12/uFc0KX+wUs7EDpOUGKMXBXZJiBVGdK5/m/QgXOCg2mQ0bQWoKSWNrCeOg7Vum6Kw1d1TW453W6xh+GbHquw==}
+    peerDependencies:
+      eslint: ^7.23.0 || ^8.0.0
+      typescript: '>=3.3.1'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@next/eslint-plugin-next': 14.2.2
       '@rushstack/eslint-patch': 1.5.1
       '@typescript-eslint/parser': 6.9.1(eslint@8.52.0)(typescript@5.2.2)
       eslint: 8.52.0

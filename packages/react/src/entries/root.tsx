@@ -20,30 +20,21 @@ import {
   Modelable,
   defineHook,
   usingStack,
-  usingProvided,
-  usingProvider,
-  ReconContext,
-  ReconProvider,
-  SerializedNode,
-  getProviderKey,
-  usingDefinedAsync,
-  usingDefined,
+  usingDefinedSync,
   manifestBy,
   usingDefinedEvent,
+  getConsumers,
 } from "@reconjs/recon"
 
 import { 
-  AnyFunction,
   Fanc,
   Func,
   Func0,
   Serial,
-  Vanc,
   guidBy,
   isEqual, 
   loadPromise, 
   memoize, 
-  once, 
   preflush, 
   susync,
 } from "@reconjs/utils"
@@ -51,7 +42,6 @@ import {
 import {
   Fragment,
   PropsWithChildren,
-  lazy,
   use,
   useId,
   useMemo,
@@ -63,19 +53,21 @@ import {
 } from "../lib/depository"
 
 import {
-  usingDefinedAsync_default,
   usingDefined_default
 } from "../lib/provide-defined"
 
-import { Depository, usingQuery, validateDepository } from "../lib/using-query"
+import { 
+  Depository, 
+  usingQuery, 
+  validateDepository,
+} from "../lib/using-query"
+
 import { RuntimeContext } from "../client/runtime-context"
 import { ClientMode } from "../client/mode"
 import { ReconStoreProvider, handleStore } from "../define-store"
 import { clientContextOf } from "../lib/client-context"
 import { usingSource } from "../lib/client-sync"
-import { getConsumers } from "../meta/get-consumers"
 import { usingDeferredView } from "../via-deferred"
-import { usingDefinedClientView } from "../client/defined-view"
 import { usingScopeSerializer, usingScopeStackSync } from "../lib/scopes"
 import { SerialScope } from "../types"
 import { handleSsrHack } from "../ssr-hack"
@@ -159,7 +151,8 @@ const handleServer = () => handleHook (usingServerAtom, (key, ...atoms) => {
     const args = atoms.map (a => a())
     const scopes = getScopes ()
 
-    const manifest = manifestBy (key).read ()
+    const manifest = manifestBy (key).get ()
+
     if (manifest.kind === "action") {
       return async () => {
         console.log ("action called: ", key)
@@ -212,31 +205,32 @@ const usingAction = defineHook <
 })
 
 function handleAction (handler: Fanc) {
-  const getSerializer = usingScopeSerializer ()
-  const contexts = usingStack ()
+  handleHook (usingAction, () => {
+    const getSerializer = usingScopeSerializer ()
+    const contexts = usingStack ()
 
-  const onAction = usingConstant (() => {
-    const getScopes = getSerializer (...contexts)
+    return usingConstant (() => {
+      const getScopes = getSerializer (...contexts)
 
-    return async (key: string, ...args: any[]) => {
-      const scopes = await susync (() => getScopes ())
+      return async (key: string, ...args: any[]) => {
+        const scopes = await susync (() => getScopes ())
 
-      const res = await handler ({
-        queries: [],
-        actions: [
-          {
-            key,
-            args,
-            scopes,
-          }
-        ],
-      })
+        // TODO: Make this query elsewhere...
+        const res = await handler ({
+          queries: [],
+          actions: [
+            {
+              key,
+              args,
+              scopes,
+            }
+          ],
+        })
 
-      // TODO: Invalidate/Revalidate
-    }
+        // TODO: Invalidate/Revalidate
+      }
+    })
   })
-
-  handleHook (usingAction, () => onAction)
 }
 
 
@@ -249,6 +243,7 @@ function usingHoistedStore (factory: Func, ...atoms: Atom[]) {
   })
 
   console.log ("[usingHoistedStore]", ...providers)
+  
   const ctx = usingContext (...providers)
   const context = clientContextOf (ctx)
 
@@ -331,7 +326,7 @@ const getRootPromise = memoize ((id: string) => {
     handleStore (usingHoisted)
     handleSsrHack ()
     
-    handleHook (usingDefined, (factory, ...args) => {
+    handleHook (usingDefinedSync, (factory, ...args) => {
       // if (isBrowser()) return usingHoisted (factory, ...args)
       return usingDefined_default (factory, ...args)
     })

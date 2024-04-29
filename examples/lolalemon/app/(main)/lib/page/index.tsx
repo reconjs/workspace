@@ -1,10 +1,10 @@
-import { define } from "@reconjs/core"
+import { defineSync } from "@reconjs/core"
 import { defineView } from "@reconjs/react"
 
 import { usingContentView } from "@/lib/content"
 import { asaContent } from "@/lib/content/model"
 
-const usingPageContent = define (() => {
+const usingPageContent = defineSync (() => {
   return asaContent (() => "A")
 })
 
