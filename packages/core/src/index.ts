@@ -1,10 +1,11 @@
 import { define } from "@reconjs/recon"
-
-
+export { isReconRunning } from "@reconjs/recon"
 
 export default function recon (key: string) {
   return define
 }
+
+export { Value$ } from "./value"
 
 
 

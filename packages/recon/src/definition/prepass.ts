@@ -2,6 +2,7 @@ import { Func } from "@reconjs/utils"
 
 import { createRoot, defineHook, handleHook } from "../hooks"
 import { Modeled } from "../models"
+import { ReconType } from "./types"
 
 export type PrepassAtom = {
   kind: "atom",
@@ -20,7 +21,7 @@ export type PrepassResult = {
 }
 
 export type PrepassDef = {
-  args: Array <Modeled>,
+  // args: Array <ReconType>,
   hooks: Array <PrepassHook>,
   result: PrepassResult,
 }
@@ -52,9 +53,10 @@ export function usingPrepasser () {
     })
 
     const { result } = prepassOf (hook)
+    return result
 
     // TODO: more sophisticated...
-    return result.prepass (...args)
+    // return result.prepass (...args)
   }
 }
 
@@ -67,16 +69,17 @@ export function prepassOf (factory: Func) {
   if (found) return found
 
   try {
-    const res: PrepassDef = {
-      args: [],
-      hooks: [],
-      result: undefined as any,
-    }
-
-    createRoot ().exec (() => {
+    const res = createRoot ().exec (() => {
       // TODO: args
-      handleHook (usingPrepassHookList, () => res.hooks)
-      res.result = factory ()
+      const def: PrepassDef = {
+        // args: [],
+        hooks: [],
+        result: undefined as any,
+      }
+
+      handleHook (usingPrepassHookList, () => def.hooks)
+      def.result = factory ()
+      return def
     })
 
     MAP.set (factory, res)

@@ -1,11 +1,17 @@
 import define from "./define"
 export { define }
 
-export type { ReconType, Recon, ReconHook, ReconConstant } from "./define"
-
-export { 
-  usingDefined, 
-  createHookResolver, createConstantResolver,
+export {
+  usingDefined,
 } from "./define"
-export { prepassOf, usingPrepasser } from "./prepass"
+
+export { usingPrepasser } from "./prepass"
 export { getScopes } from "./scopes"
+
+export type {
+  ReconType,
+  Recon,
+  ReconConstant,
+} from "./types"
+
+export { ReconHookResolver, ReconHook } from "./types"

@@ -1,22 +1,56 @@
-import { Recon, ReconHook, isReconRunning } from "@reconjs/recon"
+import {
+  Atom,
+  Atomizable,
+  Modelable,
+  Recon,
+  ReconHook,
+  ReconHookResolver,
+  usingDefinedSync,
+  usingPrepasser,
+} from "@reconjs/recon"
+import { memoize } from "@reconjs/utils"
 
-export function Value$ <
-  F extends () => any
-> (resolve: F) {
-  type T = ReturnType <F>
-  type R = ReconHook <Recon <T>>
+const execBy = memoize ((hook: ReconHook) => {
+  return (...args: any[]) => {
+    const resolver = hook.factory (...args) as ReconValueResolver
+    return resolver.evaluate
+  }
+})
 
-  // TODO: Get the instructions from define.
+class ReconValueResolver <
+  T extends Atomizable = Atomizable
+> extends ReconHookResolver <Recon <T>> {
+  evaluate: () => T
 
-  const res: Partial <R> = () => {
-    // TODO: Default behavior.
-    const instructions = []
+  constructor (evaluate: () => T) {
+    super ()
+    this.evaluate = evaluate
+  }
 
-    return function resolveValue$ (...args: any[]) {
+  resolve = (..._args: Recon[]): Recon <T> => {
+    const args = _args as any[] as Atom <Modelable>[]
 
+    const exec = execBy (this.hook)
+    const prepass = usingPrepasser ()
+
+    if (prepass) {
+      prepass (exec, ...args)
+      
+      const res = (): any => {
+        throw new Error ("You aren't supposed to call this.")
+      }
+
+      res.__RECON__ = "local" as const
+      return res
+    }
+    else {
+      // TODO: move away from atoms
+      const atom = usingDefinedSync (exec, ...args)
+      return atom as any
     }
   }
-  res.__RECON__ = "hook"
+}
 
-  return res as R
+export function Value$ <T extends Atomizable> (evaluate: () => T) {
+  return new ReconValueResolver <T> (evaluate)
 }

@@ -1,14 +1,15 @@
 import { 
   Atom, 
-  Modelable, 
-  ReconHook, 
-  createHookResolver, 
-  isReconRunning, 
+  Modelable,
+  Recon,
+  ReconHook,
+  ReconHookResolver,
   usingMode,
+  usingPrepasser,
 } from "@reconjs/recon"
 import { RSC } from "@reconjs/utils-react"
 import { FunctionComponent } from "react"
-import { Func } from "@reconjs/utils"
+import { memoize } from "@reconjs/utils"
 
 import { ClientMode } from "../client/mode"
 import { usingDefinedClientView } from "../client/defined-view"
@@ -21,52 +22,61 @@ import { StaticMode } from "../static/mode"
 
 import { useClientView } from "../client/use-view"
 
-const resolveView = createHookResolver ((hook) => {
-  /* From viaReact:
-  const usingSelf = (...args: any[]) => {
-    usingQuery (fn, ...args)
-    console.log ("after usingQuery")
-    return fn (...args)
-  }
-  */
+type AnyView = FunctionComponent <any>
 
-  function view (...args: Atom<Modelable>[]) {
-    
-  }
-
-  return function runView (..._args: any[]) {
-    // TODO: Don't use atoms...
-    const args = _args as Atom<Modelable>[]
-    const fn = hook.factory
-
-    if (isReconRunning ()) {
-      const fn = hook.factory
-
-      // 
-      const mode = usingMode ()
-
-      if (mode === ClientMode) return usingDefinedClientView (fn, ...args)
-      if (mode === ServerMode) return usingDefinedServerView (fn, ...args)
-
-      if (mode === StaticMode) {
-        // raiseClient()
-        return usingDefinedStaticView (fn, ...args)
-      }
-    }
-    else if (RSC) {
-      throw new Error ("Not allowed to call this right now...")
-    }
-    else {
-      // As a React hook
-
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      return useClientView (fn, ...args)
-    }
+const execBy = memoize ((hook: ReconHook) => {
+  return (...args: any[]) => {
+    const resolver = hook.factory (...args) as ReconViewResolver <AnyView>
+    return resolver.view
   }
 })
 
-export function View$ <
-  F extends FunctionComponent <any>
-> (view: F) {
-  return resolveView (view) as ReconHook <F>
+class ReconViewResolver <V extends AnyView> extends ReconHookResolver <V> {
+  view: V
+
+  constructor (view: V) {
+    super ()
+    this.view = view
+  }
+
+  invoke = (..._args: Recon[]) => {
+    // As a React hook
+    if (RSC) {
+      throw new Error ("Not allowed to call this right now...")
+    }
+
+    const fn = execBy (this.hook)
+    const args = _args as any[] as Atom<Modelable>[]
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useClientView (fn, ...args) as any as V
+  }
+
+  resolve = (..._args: Recon[]) => {
+    // TODO: Don't use atoms...
+    const fn = execBy (this.hook)
+    const args = _args as any[] as Atom<Modelable>[]
+
+    const prepass = usingPrepasser ()
+
+    if (prepass) {
+      prepass (fn, ...args)
+      const res = () => null
+      return res as any
+    }
+    
+    const mode = usingMode ()
+
+    if (mode === ClientMode) return usingDefinedClientView (fn, ...args) as V
+    if (mode === ServerMode) return usingDefinedServerView (fn, ...args) as V
+    
+    // TODO: raiseClient()?
+    if (mode === StaticMode) return usingDefinedStaticView (fn, ...args) as V
+
+    throw new Error ("Cannot resolve in this")
+  }
+}
+
+export function View$ <V extends AnyView> (view: V) {
+  return new ReconViewResolver (view)
 }

@@ -79,7 +79,7 @@ export const usingStack = defineHook (() => {
 })
 
 export const usingContext = defineHook ((...providers: ReconProvider[]) => {
-  console.log ("[usingContext] root", ...providers)
+  // console.log ("[usingContext] root", ...providers)
   return CONTEXT
 })
 
@@ -142,7 +142,7 @@ export const provide = defineHook ((by: ReconProvider, atom: Atom) => {
 
   const _usingContext = usingHandler (usingContext)
   handleHook (usingContext, (...providers: ReconProvider[]) => {
-    console.log ("[usingContext] handled", ...providers)
+    // console.log ("[usingContext] handled", ...providers)
     if (providers.includes (by)) return context
     return _usingContext (...providers)
   })

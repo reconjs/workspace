@@ -1,4 +1,4 @@
-import recon from "@reconjs/core"
+import recon, { Value$, isReconRunning } from "@reconjs/core"
 import { View$ } from "@reconjs/react"
 
 // import { getGreeting$ } from "../greeting"
@@ -6,8 +6,20 @@ import { View$ } from "@reconjs/react"
 
 const $ = recon ("@/app/lib/page")
 
-/*
+const getGreeting$ = $(() => {
+  return Value$ (() => {
+    return "Hello World"
+  })
+})
+
 const useGreeting$ = $(() => {
+  if (isReconRunning()) {
+    console.log ("[useGreeting$] recon is running")
+  }
+  else {
+    console.log ("[useGreeting$] recon is not running")
+  }
+
   const $greeting = getGreeting$()
 
   return View$ (() => {
@@ -18,19 +30,23 @@ const useGreeting$ = $(() => {
     )
   })
 })
-*/
 
-const Greeting = () => null
 const Counter = () => null
 
 export const usePage$ = $(() => {
-  // const Greeting = useGreeting$()
+  if (isReconRunning()) {
+    console.log ("[usePage$] recon is running")
+  }
+  else {
+    console.log ("[usePage$] recon is not running")
+  }
+
+  const Greeting = useGreeting$()
   // const Counter = useCounter$()
 
   return View$ (() => {
     return (
       <article className="p-8 flex flex-col gap-4">
-        Hello World
         <Greeting />
         <Counter />
       </article>
