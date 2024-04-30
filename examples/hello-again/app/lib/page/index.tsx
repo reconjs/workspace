@@ -1,6 +1,6 @@
 "use client"
 
-import { usePage$ } from "./use-page"
+import { usePage$ } from "./use-section"
 
 // import { getGreeting$ } from "../greeting"
 // import { useCounter$ } from "@/lib/counter"
