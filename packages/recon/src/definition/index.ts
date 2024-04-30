@@ -9,6 +9,7 @@ export { usingPrepasser } from "./prepass"
 export { getScopes } from "./scopes"
 
 export type {
+  AnyPrimitive,
   ReconType,
   Recon,
   ReconConstant,

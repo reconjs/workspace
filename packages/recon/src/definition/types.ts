@@ -1,15 +1,17 @@
-import { Func } from "@reconjs/utils"
-import { Atomizable, InferAtomizableType } from "../atom"
-import { ModelClass, Modeled } from "../models"
+import { Jsonny } from "@reconjs/utils"
 
-export type ReconType <M extends Modeled = Modeled> = {
+export type AnyPrimitive = String|Number
+
+export type ReconType <C extends AnyPrimitive = AnyPrimitive> = {
   __RECON__: "type",
-  (): ModelClass <M>,
+  (arg: any): C,
 }
 
-export type Recon <T extends Atomizable = Atomizable> = {
+export type Recon <T extends Jsonny|AnyPrimitive = AnyPrimitive> = {
   __RECON__: "local",
-  (): InferAtomizableType <T>,
+  (): T extends String ? string 
+    : T extends Number ? number 
+    : never,
 }
 
 export type ReconConstant <T = any> = {

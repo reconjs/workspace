@@ -1,6 +1,5 @@
 import {
   Atom,
-  Atomizable,
   Modelable,
   Recon,
   ReconHook,
@@ -8,17 +7,27 @@ import {
   usingDefinedSync,
   usingPrepasser,
 } from "@reconjs/recon"
-import { memoize } from "@reconjs/utils"
+import { Jsonny, memoize } from "@reconjs/utils"
 
 const execBy = memoize ((hook: ReconHook) => {
-  return (...args: any[]) => {
+  return (..._args: any[]) => {
+    const args: Recon[] = _args.map ((arg: any) => {
+      if (arg.__RECON__ === "modeled") {
+        const res: any = () => arg.value
+        res.__RECON__ = "local"
+        return res
+      }
+      
+      return arg
+    })
+
     const resolver = hook.factory (...args) as ReconValueResolver
     return resolver.evaluate
   }
 })
 
 class ReconValueResolver <
-  T extends Atomizable = Atomizable
+  T extends Jsonny = Jsonny
 > extends ReconHookResolver <Recon <T>> {
   evaluate: () => T
 
@@ -27,30 +36,23 @@ class ReconValueResolver <
     this.evaluate = evaluate
   }
 
-  resolve = (..._args: Recon[]): Recon <T> => {
-    const args = _args as any[] as Atom <Modelable>[]
+  resolve = (...args: Recon[]): Recon <T> => {
+    const atoms = args as any[] as Atom <Modelable>[]
 
     const exec = execBy (this.hook)
     const prepass = usingPrepasser ()
 
     if (prepass) {
-      prepass (exec, ...args)
-      
-      const res = (): any => {
-        throw new Error ("You aren't supposed to call this.")
-      }
-
-      res.__RECON__ = "local" as const
-      return res
+      return prepass (exec, ...args)
     }
     else {
       // TODO: move away from atoms
-      const atom = usingDefinedSync (exec, ...args)
+      const atom = usingDefinedSync (exec, ...atoms)
       return atom as any
     }
   }
 }
 
-export function Value$ <T extends Atomizable> (evaluate: () => T) {
+export function Value$ <T extends Jsonny> (evaluate: () => T) {
   return new ReconValueResolver <T> (evaluate)
 }
