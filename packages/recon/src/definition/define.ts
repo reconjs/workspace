@@ -6,7 +6,6 @@ import {
   InferReconType,
   InferResolverType,
   Recon,
-  ReconConstant,
   ReconHook,
   ReconHookResolver,
   ReconType,
@@ -42,7 +41,7 @@ function defineAux (factory: Func, types: ReconType[]) {
 
     return (..._args: Recon[]) => {
       // backwards compatibility
-      const args = _args.map (arg => {
+      const args = _args.map ((arg: any) => {
         if (arg.__RECON__ === "modeled") {
           const res: any = () => arg.value
           res.__RECON__ = "local"

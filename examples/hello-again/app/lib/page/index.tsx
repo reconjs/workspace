@@ -1,6 +1,5 @@
 "use client"
 
-import { BrowserBoundary } from "@reconjs/utils-react"
 import { useSection$, useSpanishSection$ } from "./use-section"
 
 // import { getGreeting$ } from "../greeting"
@@ -12,7 +11,6 @@ const Counter = () => null
 export default function Page () {
   const SpanishGreeting = useSpanishSection$()
   const Greeting = useSection$()
-  
 
   if (!Greeting) console.error ("Greeting is not defined!")
   if (!SpanishGreeting) console.error ("SpanishGreeting is not defined!")

@@ -37,7 +37,6 @@ const getGreeting$ = $(LANG$)($lang => {
   */
 
   return Value$ (() => {
-    console.log ("$lang", $lang)
     const lang = $lang()
 
     if (lang === "en") return "Hello World"
@@ -88,8 +87,6 @@ export const useSpanishSection$ = $(() => {
   // const Counter = useCounter$()
 
   return View$ (() => {
-    console.log ("[useSpanishSection]", $spanish())
-
     return (
       <article className="p-8 flex flex-col gap-4">
         <Greeting />
