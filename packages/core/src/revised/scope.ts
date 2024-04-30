@@ -8,6 +8,7 @@ import {
   ReconProvider,
   provide,
   usingPrepasser,
+  usingProvided,
 } from "@reconjs/recon"
 import { memoize } from "@reconjs/utils"
 
@@ -54,12 +55,12 @@ class ReconScope <T extends AnyPrimitive = AnyPrimitive> {
   }
 
   resolve = (): Recon <T> => {
-    const { consume } = providerBy (this.hook)
+    const provider = providerBy (this.hook)
     const prepass = usingPrepasser ()
 
     if (prepass) {
       // TODO: include args
-      prepass (consume)
+      prepass (provider.consume)
       
       const res: any = () => {
         throw new Error ("You aren't supposed to call this.")
@@ -69,7 +70,7 @@ class ReconScope <T extends AnyPrimitive = AnyPrimitive> {
       return res
     }
     else {
-      return consume () as any
+      return usingProvided (provider) as any
     }
   }
 }

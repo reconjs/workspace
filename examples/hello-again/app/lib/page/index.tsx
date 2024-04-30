@@ -1,6 +1,6 @@
 "use client"
 
-import { useSection$, useSpanishSection$ } from "./use-section"
+import { useEnglishSection$, useSection$, useSpanishSection$ } from "./use-section"
 
 // import { getGreeting$ } from "../greeting"
 // import { useCounter$ } from "@/lib/counter"
@@ -10,6 +10,7 @@ const Counter = () => null
 
 export default function Page () {
   const SpanishGreeting = useSpanishSection$()
+  const EnglishGreeting = useEnglishSection$()
   const Greeting = useSection$()
 
   if (!Greeting) console.error ("Greeting is not defined!")
@@ -17,7 +18,10 @@ export default function Page () {
 
   return (
     <div>
-      <Greeting />
+      <div className="flex flex-row items-center justify-center">
+        <Greeting />
+      </div>
+      <EnglishGreeting />
       <SpanishGreeting />
     </div>
   )
