@@ -1,20 +1,22 @@
 import { memoize } from "@reconjs/utils"
-import { Atoms, createNode } from "@reconjs/recon"
-import { memo, useMemo } from "react"
+import { Atoms, ReconNode, createNode } from "@reconjs/recon"
+import { memo, useId, useMemo } from "react"
 
 import { AnyViewDef } from "../types"
 import { useReconRuntime } from "./runtime-context"
 
 // TODO: useReconRuntime should be a child factory?
-
 const componentBy = memoize ((def: AnyViewDef, ...atoms: Atoms) => {
-  const getNode = memoize (createNode)
+  const getNode = memoize ((p: ReconNode, rid: any) => createNode (p))
 
   return memo ((props) => {
     const parent = useReconRuntime ()
 
+    // TODO: Figure out why this was necessary...
+    const rid = useId ()
+
     const View = useMemo (() => {
-      const runtime = getNode (parent)
+      const runtime = getNode (parent, rid)
       return runtime.exec (() => def (...atoms))
     }, [])
 

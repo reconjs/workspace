@@ -5,7 +5,7 @@ export default function recon (key: string) {
   return define
 }
 
-export { Value$ } from "./value"
+export * from "./revised"
 
 
 

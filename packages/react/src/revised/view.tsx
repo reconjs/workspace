@@ -25,7 +25,17 @@ import { useClientView } from "../client/use-view"
 type AnyView = FunctionComponent <any>
 
 const execBy = memoize ((hook: ReconHook) => {
-  return (...args: any[]) => {
+  return (..._args: any[]) => {
+    const args: Recon[] = _args.map ((arg: any) => {
+      if (arg.__RECON__ === "modeled") {
+        const res: any = () => arg.value
+        res.__RECON__ = "local"
+        return res
+      }
+      
+      return arg
+    })
+    
     const resolver = hook.factory (...args) as ReconViewResolver <AnyView>
     return resolver.view
   }
@@ -39,39 +49,37 @@ class ReconViewResolver <V extends AnyView> extends ReconHookResolver <V> {
     this.view = view
   }
 
-  invoke = (..._args: Recon[]) => {
+  invoke = (...args: Recon[]) => {
     // As a React hook
     if (RSC) {
       throw new Error ("Not allowed to call this right now...")
     }
 
     const fn = execBy (this.hook)
-    const args = _args as any[] as Atom<Modelable>[]
+    const atoms = args as any[] as Atom<Modelable>[]
 
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useClientView (fn, ...args) as any as V
+    return useClientView (fn, ...atoms) as any as V
   }
 
-  resolve = (..._args: Recon[]) => {
+  resolve = (...args: Recon[]) => {
     // TODO: Don't use atoms...
     const fn = execBy (this.hook)
-    const args = _args as any[] as Atom<Modelable>[]
+    const atoms = args as any[] as Atom<Modelable>[]
 
     const prepass = usingPrepasser ()
 
     if (prepass) {
-      prepass (fn, ...args)
-      const res = () => null
-      return res as any
+      return prepass (fn, ...args)
     }
     
     const mode = usingMode ()
 
-    if (mode === ClientMode) return usingDefinedClientView (fn, ...args) as V
-    if (mode === ServerMode) return usingDefinedServerView (fn, ...args) as V
+    if (mode === ClientMode) return usingDefinedClientView (fn, ...atoms) as V
+    if (mode === ServerMode) return usingDefinedServerView (fn, ...atoms) as V
     
     // TODO: raiseClient()?
-    if (mode === StaticMode) return usingDefinedStaticView (fn, ...args) as V
+    if (mode === StaticMode) return usingDefinedStaticView (fn, ...atoms) as V
 
     throw new Error ("Cannot resolve in this")
   }

@@ -1,18 +1,16 @@
 import { Func } from "@reconjs/utils"
 
 import { createRoot, defineHook, handleHook } from "../hooks"
-import { Modeled } from "../models"
-import { ReconType } from "./types"
+import { AnyPrimitive, Recon, ReconType } from "./types"
 
-export type PrepassAtom = {
-  kind: "atom",
+export type PrepassRef = {
   from: "argument"|"hook",
   index: number,
 }
 
 export type PrepassHook = {
   hook: Func,
-  args: Array <PrepassAtom>,
+  args: Array <PrepassRef>,
 }
 
 export type PrepassResult = {
@@ -21,7 +19,7 @@ export type PrepassResult = {
 }
 
 export type PrepassDef = {
-  // args: Array <ReconType>,
+  args: Array <ReconType>,
   hooks: Array <PrepassHook>,
   result: PrepassResult,
 }
@@ -38,6 +36,13 @@ const usingPrepassHookList = defineHook (() => {
   return NEVER_LIST
 })
 
+function prepassOfRefs (refs: Recon[]) {
+  return refs.map ((a: any) => {
+    if (! a.prepass) throw new Error ("PREPASS MISSING ON REF")
+    return a.prepass as PrepassRef
+  })
+}
+
 /**
  * @returns a prepass register function 
  * (only if we are prepassing).
@@ -46,14 +51,21 @@ export function usingPrepasser () {
   const list = usingPrepassHookList ()
   if (list === NEVER_LIST) return
 
-  return (hook: Func, ...args: any): any => {
+  return (hook: Func, ...args: Recon<AnyPrimitive>[]) => {
+    const index = list.length
     list.push ({
       hook,
-      args: [],
+      args: prepassOfRefs (args),
     })
 
-    const { result } = prepassOf (hook)
-    return result
+    const res: any = () => {
+      throw new Error ("DO NOT USE")
+    }
+
+    res.__RECON__ = "prepass-ref"
+    res.prepass = { kind: "hook", index }
+
+    return res
 
     // TODO: more sophisticated...
     // return result.prepass (...args)
@@ -64,21 +76,33 @@ export function usingPrepasser () {
 
 // Calculate the instructions:
 
-export function prepassOf (factory: Func) {
+export function prepassOf (factory: Func, types: ReconType[]) {
   const found = MAP.get (factory)
   if (found) return found
 
   try {
     const res = createRoot ().exec (() => {
-      // TODO: args
       const def: PrepassDef = {
-        // args: [],
+        args: types,
         hooks: [],
         result: undefined as any,
       }
 
       handleHook (usingPrepassHookList, () => def.hooks)
-      def.result = factory ()
+
+      const args = types.map ((_, index) => {
+        const ref: any = () => {
+          throw new Error ("Not allowed")
+        }
+
+        ref.__RECON__ = "prepass-ref"
+        ref.prepass = { kind: "argument", index }
+
+        // TODO: update type
+        return ref
+      })
+
+      def.result = factory (...args)
       return def
     })
 
