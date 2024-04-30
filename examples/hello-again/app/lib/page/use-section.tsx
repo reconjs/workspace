@@ -33,7 +33,7 @@ const useGreeting$ = $(() => {
 
 const Counter = () => null
 
-export const usePage$ = $(() => {
+export const useSection$ = $(() => {
   if (isReconRunning()) {
     console.log ("[usePage$] recon is running")
   }
