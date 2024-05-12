@@ -66,7 +66,7 @@ export function usingDefinedClientView (
 ): FunctionComponent <any> {
   usingConstant (() => {
     for (const arg of args) {
-      if (arg.__RECON__ !== "atom") {
+      if (arg.__RECON__ !== "atom" && arg.__RECON__ !== "local") {
         // console.log ("atom = ", arg)
         const msg = "Invalid atom (__RECON__ is not atom)"
         throw new Error (`[usingDefinedClientView] ${msg}`)
