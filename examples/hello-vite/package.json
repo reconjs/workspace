@@ -12,6 +12,7 @@
   "dependencies": {
     "@reconjs/core": "workspace:*",
     "@reconjs/react": "workspace:*",
+    "@reconjs/utils-react": "workspace:*",
     "react": "beta",
     "react-dom": "beta"
   },
