@@ -1,0 +1,25 @@
+{
+  "name": "lolalemon-vite",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@reconjs/core": "workspace:*",
+    "@reconjs/react": "workspace:*",
+    "@reconjs/utils-react": "workspace:*",
+    "react": "beta",
+    "react-dom": "beta"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.11"
+  }
+}

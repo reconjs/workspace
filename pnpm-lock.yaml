@@ -241,6 +241,37 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2
 
+  examples/lolalemon/vite:
+    dependencies:
+      '@reconjs/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@reconjs/react':
+        specifier: workspace:*
+        version: link:../../../packages/react
+      '@reconjs/utils-react':
+        specifier: workspace:*
+        version: link:../../../packages/utils-react
+      react:
+        specifier: beta
+        version: 19.0.0-beta-9d76c954cf-20240510
+      react-dom:
+        specifier: beta
+        version: 19.0.0-beta-9d76c954cf-20240510(react@19.0.0-beta-9d76c954cf-20240510)
+    devDependencies:
+      '@vitejs/plugin-react':
+        specifier: ^4.2.1
+        version: 4.2.1(vite@5.2.11)
+      tailwindcss:
+        specifier: ^3.4.3
+        version: 3.4.3
+      typescript:
+        specifier: ^5.2.2
+        version: 5.2.2
+      vite:
+        specifier: ^5.2.11
+        version: 5.2.11(@types/node@20.8.10)
+
   examples/tweeter/legacy:
     dependencies:
       '@headlessui/react':
