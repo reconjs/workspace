@@ -19,6 +19,7 @@ import {
 import { PropsWithChildren, Suspense } from "react"
 import { 
   AnyFunction, 
+  Func, 
   guidBy, 
   memoize, 
 } from "@reconjs/utils"
@@ -57,14 +58,18 @@ type StoreHook = (
   ...args: Atom <Modelable>[]
 ) => Atom
 
-const usingStore = defineHook <StoreHook> ((factory: AnyFactory) => {
+const _usingStore = defineHook <StoreHook> ((factory: AnyFactory) => {
   return usingAtom (() => {
     throw new Error ("[usingStore] not implemented")
   })
 })
 
+export function usingStore (factory: Func, ...args: Atom <Modelable>[]) {
+  return _usingStore (factory, ...args)
+}
+
 export function handleStore (handler: StoreHook) {
-  handleHook (usingStore, handler)
+  handleHook (_usingStore, handler)
 }
 
 
