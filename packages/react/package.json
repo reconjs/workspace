@@ -8,12 +8,14 @@
     "./types": "./src/types.ts"
   },
   "dependencies": {
-    "@reconjs/core": "workspace:*",
     "@reconjs/recon": "workspace:*",
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-react": "workspace:*",
-    "@reconjs/utils-server": "workspace:*",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@reconjs/utils-server": "workspace:*"
+  },
+  "peerDependencies": {
+    "@reconjs/core": "workspace:*",
+    "react": "*",
+    "react-dom": "*"
   }
 }

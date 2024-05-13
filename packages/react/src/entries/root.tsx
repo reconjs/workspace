@@ -290,7 +290,7 @@ function usingHoisted (
   })
 }
 
-const getRootPromise = memoize ((id: string) => {
+const getRootPromise = memoize (() => {
   const root = createRoot ()
   const flushPromise = preflush ()
 
@@ -459,10 +459,12 @@ type RootProps = PropsWithChildren <{
   handler: Fanc,
 }>
 
+const promise = getRootPromise ()
+
 export function ReconRoot (props: RootProps) {
   const id = useId ()
 
-  const parent = use (getRootPromise (id))
+  const parent = use (promise)
 
   const { handler } = props
 
