@@ -36,7 +36,7 @@ const getGreeting$ = $(() => {
   })
 })
 
-export const useGreeting$ = $(PLACE$)(($place) => {
+export const useGreeting$ = $(PLACE$) (($place) => {
   const $greet = getGreeting$ ()
 
   return View$ (() => {
