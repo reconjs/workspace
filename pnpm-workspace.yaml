@@ -1,7 +1,9 @@
 # pnpm-workspace.yaml
 packages:
   # Examples: The apps for the examples
-  - 'examples/*'
+  - 'examples/hello-world/*'
+  - 'examples/lolalemon/*'
+  - 'examples/tweeter/*'
 
   # Packages:
   - 'packages/*'
