@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev": "nx dev hello-world",
+    "hello-world": "nx dev hello-world",
     "hello-again": "nx dev hello-again",
     "hello-vite": "nx dev hello-vite",
     "lolalemon": "nx dev lolalemon",
