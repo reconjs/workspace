@@ -1,6 +1,5 @@
-import { FunctionComponent, memo, useMemo, useDebugValue } from "react"
+import { FunctionComponent, memo, useMemo, useState, useEffect } from "react"
 import { Source, memoize } from "@reconjs/utils"
-import { useInitial } from "@reconjs/utils-react"
 import {
   Atom,
   Atoms,
@@ -8,6 +7,7 @@ import {
   ModelClass,
   Modeled,
   ReconNode,
+  createNode,
   handleHook,
   usingChild,
   usingChildFactory,
@@ -84,7 +84,9 @@ export function usingDefinedClientView (
 
   return usingConstant (() => {
     function ClientView (props: any) {
-      const ran = useInitial (() => runtime.exec (() => {
+      const [ node, setNode ] = useState (() => createNode (runtime))
+
+      const ran = useMemo (() => node.exec (() => {
         const sources = usingConstant <Source <any>[]> (() => [])
 
         handleHook (usingSource, (s: Source <any>) => {
@@ -109,7 +111,17 @@ export function usingDefinedClientView (
             useRender,
           }
         })
-      }))
+      }), [ node ])
+
+      useEffect (() => {
+        const unsubs = ran.sources.map ((s) => s.subscribe (() => {
+          setNode (createNode (runtime))
+        }))
+
+        return () => {
+          unsubs.forEach (unsub => unsub())
+        }
+      }, [ ran.sources ])
 
       for (const s of ran.sources) {
         useSyncExternalStore (s.subscribe, s.read, s.read)

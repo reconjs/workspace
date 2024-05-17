@@ -28,6 +28,7 @@ export const useProductImage$ = $(() => {
     return <>
       <div className="w-full h-full">
         <img {...{ className, src }} loading="lazy" alt="product image" />
+        <h2>{$color()}</h2>
         {/*}
         <ErrorBoundary>
           <Suspense fallback={fallback}>

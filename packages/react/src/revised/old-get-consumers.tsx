@@ -6,26 +6,20 @@ import {
   susync,
 } from "@reconjs/utils"
 import { 
+  ReconProvider,
   createRoot, 
   defineHook, 
-  handleHook, 
+  handleHook,
+  usingAtom, 
   usingChild, 
   usingConstant,
-} from "./hooks"
-import { usingAtom } from "./atom"
-import { ReconProvider, usingProvided } from "./providers"
-import {
-  usingBroadlyAux,
-  usingDefinedSync,
   usingDefinedAction,
   usingDefinedAsync,
   usingDefinedEvent,
-  usingServerAtom,
-  usingServerImport,
-} from "./core-hooks"
-import { ReconMode, usingMode } from "./mode"
-
-export class ManifestMode extends ReconMode {}
+  usingDefinedSync,
+  usingProvided,
+} from "@reconjs/recon"
+import { handleStore } from "../define-store"
 
 function usingRef <T = any> () {
   return usingConstant (() => ({
@@ -88,42 +82,11 @@ const getNode = memoize ((self: AnyFunction) => {
   const consumers = new Set <ReconProvider> ()
 
   return root.exec (() => {
-    handleHook (usingMode, () => ManifestMode)
     handleHook (usingConsumerSet, () => consumers)
 
     handleHook (usingDefinedSync, (factory) => {
       usingChildConsumers (factory)
       return usingProxyAtom ()
-    })
-
-    handleHook (usingDefinedAsync, (factory) => {
-      usingChildConsumers (factory)
-      return usingProxyAtom ()
-    })
-
-    handleHook (usingDefinedAction, (factory) => {
-      usingChildConsumers (factory)
-      return usingProxyAtom ()
-    })
-
-    handleHook (usingDefinedEvent, (factory) => {
-      usingChildConsumers (factory)
-      return usingProxyAtom ()
-    })
-
-    // TODO: Is this still necessary?
-    handleHook (usingServerImport, () => {})
-
-    handleHook (usingServerAtom, () => {
-      // TODO: get from request?
-      return usingProxyAtom ()
-    })
-
-    // @ts-ignore
-    handleHook (usingBroadlyAux, () => {
-      return usingConstant (() => (factory: AnyFunction) => {
-        return factory
-      })
     })
 
     handleHook (usingProvided, (provider) => {
@@ -132,7 +95,10 @@ const getNode = memoize ((self: AnyFunction) => {
       return usingProxyAtom ()
     })
 
-    handle
+    handleStore ((factory) => {
+      usingChildConsumers (factory)
+      return usingProxyAtom ()
+    })
 
     return [
       usingChild (),

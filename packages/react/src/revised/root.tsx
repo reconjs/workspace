@@ -14,7 +14,6 @@ import {
   Modeled,
   Modelable,
   usingDefinedSync,
-  getConsumers,
 } from "@reconjs/recon"
 
 import {
@@ -47,6 +46,8 @@ import { ReconStoreProvider, handleStore } from "../define-store"
 import { clientContextOf } from "../lib/client-context"
 import { usingSource } from "../lib/client-sync"
 import { SerialScope } from "../types"
+
+import { getConsumers } from "./old-get-consumers"
 
 const NOT_WINDOW = {}
 
@@ -162,10 +163,7 @@ const getRootPromise = memoize (() => {
     handleStore (usingHoisted)
     // handleSsrHack ()
     
-    handleHook (usingDefinedSync, (factory, ...args) => {
-      if (isBrowser()) return usingHoisted (factory, ...args)
-      return usingDefined_default (factory, ...args)
-    })
+    handleHook (usingDefinedSync, usingHoisted)
 
     return usingChild ()
   }))

@@ -18,7 +18,7 @@ import {
   usingProxyAtom,
   usingStack,
 } from "@reconjs/recon"
-import { PropsWithChildren, Suspense } from "react"
+import { PropsWithChildren, Suspense, useMemo } from "react"
 import { 
   AnyFunction, 
   Func, 
@@ -158,6 +158,8 @@ const getMetastore = memoize ((
         store.dispatch ({ result })
       }, [ result ])
 
+      useMemo (() => result, [ result ])
+
       return null
     }
     catch (thrown) {
@@ -166,7 +168,7 @@ const getMetastore = memoize ((
     }
   }
 
-  return () => {
+  return function MetastoreWrapper () {
     const node = useInitial (() => createNode (context.node))
 
     return (
