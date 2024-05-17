@@ -14,6 +14,7 @@ const execBy = memoize ((hook: ReconHook) => {
     const args: Recon[] = _args.map ((arg: any) => {
       if (arg.__RECON__ === "modeled") {
         const res: any = () => {
+          return arg.value
           throw new Error ("You aren't supposed to call this.")
         }
         

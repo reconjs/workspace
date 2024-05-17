@@ -14,14 +14,14 @@ export type Jsonny = null
   | boolean
   | Jsonny[]
   | {
-    [key: string]: Jsonny
+    [key: string|number]: Jsonny
   }
 
 export type Serial = Jsonny
   | Serializable
   | Serial[]
   | {
-    [key: string]: Serial
+    [key: string|number]: Serial
   }
 
 export function hydrateSerial (obj: Jsonny, handler: (obj: Jsonny) => Serializable): Serial {

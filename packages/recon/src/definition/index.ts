@@ -12,6 +12,7 @@ export type {
   AnyPrimitive,
   ReconType,
   Recon,
+  ReconList,
   ReconConstant,
 } from "./types"
 

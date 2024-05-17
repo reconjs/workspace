@@ -81,7 +81,6 @@ export function HomePage () {
       <div className="flex flex-row items-center justify-center">
         <Greeting />
       </div>
-      {/* @ts-expect-error */}
       <Suspense fallback="Loading...">
         <HelloNewYork />
         <HolaColumbia />

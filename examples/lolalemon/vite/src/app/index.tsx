@@ -20,7 +20,7 @@ export function App () {
 
   return (
     <ReconRoot handler={handler}>
-      <Suspense>
+      <Suspense fallback="Loading...">
         <Page />
       </Suspense>
     </ReconRoot>

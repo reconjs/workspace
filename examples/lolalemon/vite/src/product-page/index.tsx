@@ -1,9 +1,13 @@
-import recon from "@reconjs/core"
+import recon, { Model$, get$, provide$ } from "@reconjs/core"
 
-import { View$ } from "@reconjs/react"
+import { Hook$, View$, useRecon } from "@reconjs/react"
 import { ErrorBoundary } from "@reconjs/utils-react"
 import { PropsWithChildren, Suspense } from "react"
+
 import { usePurchaseSection$ } from "./purchase-section"
+import { useLocation } from "../use-location"
+import { SLUG$, viaProduct$ } from "../merch/base"
+import { getProductBySlug$ } from "../merch/server"
 
 const $ = recon ("@/product-page/index")
 
@@ -54,7 +58,28 @@ function Recommender () {
   return null
 }
 
+const viaPDPSlug$ = $(() => {
+  return Hook$ (() => {
+    const { pathname = "" } = useLocation()
+    return pathname.split ("/")[2]
+  })
+})
+
+const getPDPSlug$ = $(() => {
+  const _slug = viaPDPSlug$()
+  const $slug = get$ (_slug)
+
+  return Model$ (SLUG$, () => {
+    return $slug()
+  })
+})
+
 const useProductPage$ = $(() => {
+  const $slug = getPDPSlug$()
+  const $product = getProductBySlug$ ($slug)
+  const _product = viaProduct$()
+  provide$ (_product, $product)
+  
   const PurchaseSection = usePurchaseSection$()
   // const Recommender = useRecommender$()
 
@@ -79,9 +104,17 @@ const useProductPage$ = $(() => {
   })
 })
 
-export function ProductPage () {
+// FIXME: Workaround for Provider quirk
+const usePage$ = $(() => {
   const Page = useProductPage$()
-  
+  return View$ (() => {
+    return <Page />
+  })
+})
+
+export function ProductPage () {
+  const Page = usePage$ ()
+
   return (
     <Suspense>
       <Page />

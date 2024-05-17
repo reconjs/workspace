@@ -1,4 +1,4 @@
-import { FunctionComponent, memo, useMemo } from "react"
+import { FunctionComponent, memo, useMemo, useDebugValue } from "react"
 import { Source, memoize } from "@reconjs/utils"
 import { useInitial } from "@reconjs/utils-react"
 import {
@@ -103,7 +103,7 @@ export function usingDefinedClientView (
           const contexts = newContexts.slice (0, len)
 
           return {
-            newContexts,
+            allContexts: newContexts,
             contexts,
             sources,
             useRender,

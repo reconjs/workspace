@@ -6,17 +6,18 @@ import {
   ReconHookResolver, 
   usingPrepasser,
 } from "@reconjs/recon"
-import { Jsonny, memoize } from "@reconjs/utils"
+import { Func, Jsonny, memoize } from "@reconjs/utils"
 import { usingStore } from "../define-store"
 
-type Jsonified <T> =
-  T extends Jsonny ? T
-  : T extends Record <string|number|symbol, any> ? {
-    [K in keyof T]: K extends symbol 
-      ? never
-      : Jsonified <T[K]>
+type Jsonified <T> = T extends Jsonny 
+  ? T
+  : T extends any[] ? {
+    [K in keyof T]: Jsonified <T[K]>
   }
-  : never
+  : T extends Record <string|number, any> ? {
+    [K in keyof T]: Jsonified <T[K]>
+  }
+  : null
 
 const execBy = memoize ((hook: ReconHook) => {
   return (..._args: any[]) => {

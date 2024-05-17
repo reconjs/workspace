@@ -10,8 +10,14 @@ export type ReconType <C extends AnyPrimitive = AnyPrimitive> = {
 export type Recon <T extends Jsonny|AnyPrimitive = AnyPrimitive> = {
   __RECON__: "local",
   (): T extends String ? string 
-    : T extends Number ? number 
+    : T extends Number ? number
+    : T extends Jsonny ? T
     : never,
+}
+
+export type ReconList <T extends AnyPrimitive = AnyPrimitive> = {
+  __RECON__: "list",
+  (cursor?: symbol): T[]
 }
 
 export type ReconConstant <T = any> = {

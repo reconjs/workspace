@@ -13,13 +13,16 @@ import {
   handleHook,
   usingAtom,
   usingChildConsumers,
+  usingConstant,
   usingMode,
   usingProxyAtom,
+  usingStack,
 } from "@reconjs/recon"
 import { PropsWithChildren, Suspense } from "react"
 import { 
   AnyFunction, 
   Func, 
+  Source, 
   guidBy, 
   memoize, 
 } from "@reconjs/utils"
@@ -35,6 +38,7 @@ import {
   ClientContext, 
   clientContextOf, 
 } from "./lib/client-context"
+import { usingSource } from "./lib/client-sync"
 
 type AnyAtomDef = (...args: Atoms) => Atom
 type AnyFactory <T = any> = (...args: Modelable[]) => () => T
@@ -115,10 +119,39 @@ const getMetastore = memoize ((
       const models = args.map ((arg) => {
         return createModeled (undefined as any, arg)
       })
-      const hook = node.exec (() => factory (...models))
 
-      const _result = hook ()
-      const result = useMemoDeep (() => _result, [ _result ])
+      const ran = useInitial (() => node.exec (() => {
+        const sources = usingConstant <Source <any>[]> (() => [])
+
+        handleHook (usingSource, (s: Source <any>) => {
+          usingConstant (() => {
+            sources.push (s)
+          })
+        })
+
+        // probably not ideal!
+        const oldContexts = usingStack ()
+        const useRender = factory (...models)
+        const newContexts = usingStack ()
+
+        return usingConstant (() => {
+          const len = newContexts.length - oldContexts.length
+          const contexts = newContexts.slice (0, len)
+
+          return {
+            allContexts: newContexts,
+            contexts,
+            sources,
+            useRender,
+          }
+        })
+      }))
+
+      for (const s of ran.sources) {
+        useSyncExternalStore (s.subscribe, s.read, s.read)
+      }
+
+      const result = ran.useRender ()
 
       // TODO: Do we do this inline?
       useEffect (() => {
