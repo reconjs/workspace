@@ -70,6 +70,26 @@ const useHelloWorld$ = $(() => {
   return View$ (() => <Greeting />)
 })
 
+export const useHomePage$ = $(() => {
+  const HelloNewYork = useHelloNewYork$()
+  const HolaColumbia = useHolaColumbia$()
+
+  const Greeting = useHelloWorld$()
+
+  return View$ (() => (
+    <div>
+      <div className="flex flex-row items-center justify-center">
+        <Greeting />
+      </div>
+      <Suspense fallback="Loading...">
+        <HelloNewYork />
+        <HolaColumbia />
+      </Suspense>
+    </div>
+  ))
+})
+
+/*
 export function HomePage () {
   const HelloNewYork = useHelloNewYork$()
   const HolaColumbia = useHolaColumbia$()
@@ -88,3 +108,4 @@ export function HomePage () {
     </div>
   )
 }
+*/

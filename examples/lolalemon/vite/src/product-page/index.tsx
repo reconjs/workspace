@@ -74,7 +74,7 @@ const getPDPSlug$ = $(() => {
   })
 })
 
-const useProductPage$ = $(() => {
+const useProductPageAux$ = $(() => {
   const $slug = getPDPSlug$()
   const $product = getProductBySlug$ ($slug)
   const _product = viaProduct$()
@@ -105,19 +105,9 @@ const useProductPage$ = $(() => {
 })
 
 // FIXME: Workaround for Provider quirk
-const usePage$ = $(() => {
-  const Page = useProductPage$()
+export const useProductPage$ = $(() => {
+  const Page = useProductPageAux$()
   return View$ (() => {
     return <Page />
   })
 })
-
-export function ProductPage () {
-  const Page = usePage$ ()
-
-  return (
-    <Suspense>
-      <Page />
-    </Suspense>
-  )
-}

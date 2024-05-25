@@ -1,22 +1,47 @@
 import { Suspense } from "react"
-import { ReconClient } from "@reconjs/react"
+import recon, { get$ } from "@reconjs/core"
 
-import { HomePage } from "./page"
-
+import { Hook$, View$ } from "@reconjs/react"
 import { useLocation } from "../use-location"
-import { ProductPage } from "../product-page"
+
+const $ = recon ("@/app")
+
+const viaPath$ = $(() => {
+  return Hook$ (() => {
+    const { pathname } = useLocation()
+    return pathname
+  })
+})
+
+const useDefaultPage$ = $(() => {
+  return View$ (() => {
+    return <p>Not Found</p>
+  })
+})
+
+const useApp$ = $(() => {
+  const $path = get$ (viaPath$())
+
+  const Page = useDefaultPage$()
+  /*
+  const Page = useView$ (() => {
+    const path = $path()
+    if (path === "/") return useHomePage$()
+    return useDefaultPage$()
+  })
+  */
+
+  return View$ (() => {
+    return <Page />
+  })
+})
 
 export function App () {
-  const { pathname = "" } = useLocation()
-
-  let Page = HomePage
-  if (pathname.startsWith ("/product/")) Page = ProductPage
+  const App = useApp$()
 
   return (
-    <ReconClient>
-      <Suspense fallback="Loading...">
-        <Page />
-      </Suspense>
-    </ReconClient>
+    <Suspense fallback="Loading...">
+      <App />
+    </Suspense>
   )
 }
