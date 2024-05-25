@@ -34,18 +34,18 @@ import {
 
 import {
   usingDefined_default
-} from "../lib/provide-defined"
+} from "../legacy/lib/provide-defined"
 
 import { 
   Depository,
-} from "../lib/using-query"
+} from "../legacy/lib/using-query"
 
-import { RuntimeContext } from "../client/runtime-context"
-import { ClientMode } from "../client/mode"
-import { ReconStoreProvider, handleStore } from "../define-store"
-import { clientContextOf } from "../lib/client-context"
-import { usingSource } from "../lib/client-sync"
-import { SerialScope } from "../types"
+import { RuntimeContext } from "../legacy/client/runtime-context"
+import { ClientMode } from "../legacy/client/mode"
+import { ReconStoreProvider, handleStore } from "../legacy/define-store"
+import { clientContextOf } from "../legacy/lib/client-context"
+import { usingSource } from "../legacy/lib/client-sync"
+import { SerialScope } from "../legacy/types"
 
 import { getConsumers } from "./old-get-consumers"
 

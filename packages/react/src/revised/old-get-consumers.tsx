@@ -19,7 +19,7 @@ import {
   usingDefinedSync,
   usingProvided,
 } from "@reconjs/recon"
-import { handleStore } from "../define-store"
+import { handleStore } from "../legacy/define-store"
 
 function usingRef <T = any> () {
   return usingConstant (() => ({

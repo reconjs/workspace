@@ -1,64 +1,73 @@
 import {
-  Adapted,
-  Adapter,
   Atom,
-  InferClassModel,
-  ModelClass,
-  registerModel,
+  Modelable,
+  Recon,
+  ReconHook,
+  ReconHookResolver,
+  ReconType,
+  usingDefinedSync,
+  usingPrepasser,
 } from "@reconjs/recon"
+import { memoize } from "@reconjs/utils"
 
-function usingModel <C extends ModelClass> (
-  model: C
-): Adapter <InferClassModel <C>> {
-  type M = InferClassModel <C>
+const execBy = memoize ((hook: ReconHook) => {
+  return (..._args: any[]) => {
+    const args: Recon[] = _args.map ((arg: any) => {
+      if (arg.__RECON__ === "modeled") {
+        const res: any = () => arg.value
+        res.__RECON__ = "local"
+        return res
+      }
+      
+      return arg
+    })
+    
+    const resolver = hook.factory (...args) as ReconModelResolver
+    return resolver.evaluate
+  }
+})
 
-  function adaptAtom (arg: any): Atom <M> {
-    if (!arg || typeof arg !== "object") {
-      // console.log ("[adaptAtom]", arg)
-      throw new Error ("[adaptAtom] expected object")
-    }
+type InferValue <
+  T extends ReconType,
+  R extends Recon = Recon <ReturnType <T>>
+> = ReturnType <R>
 
-    switch (arg.__RECON__) {
-      case "modeled":
-        const atom: Partial <Atom> = () => arg.value
-        atom.__RECON__ = "atom"
-        atom.model = arg.model
-        // @ts-ignore
-        if (arg.variable) {
-          // @ts-ignore
-          atom.variable = () => arg.variable()
-        }
-        return atom as any
-      default: throw new Error ("[adaptAtom] invalid arg")
-    }
+// TODO: Associate the type to the hook...
+class ReconModelResolver <
+  T extends ReconType = ReconType
+> extends ReconHookResolver <Recon <ReturnType <T>>> {
+  type: T
+  evaluate: () => InferValue <T>
+
+  constructor (
+    type: T,
+    evaluate: () => InferValue <T>
+  ) {
+    super ()
+    this.type = type
+    this.evaluate = evaluate
   }
 
-  // @ts-ignore
-  return (arg: unknown) => {
-    if (!arg) throw new Error ("[usingModel] expected argument")
-    if (typeof arg !== "function") return adaptAtom (arg)
+  resolve = (...args: Recon[]): Recon <ReturnType <T>> => {
+    const atoms = args as any[] as Atom <Modelable>[]
 
-    const res: Partial <Adapted <M>> = () => arg ()
-    res.__RECON__ = "adapted"
-    res.model = model as unknown as ModelClass <M>
-    return res as any
+    const exec = execBy (this.hook)
+    const prepass = usingPrepasser ()
+
+    if (prepass) {
+      return prepass (exec, ...args)
+    }
+    else {
+      // TODO: move away from atoms
+      const atom = usingDefinedSync (exec, ...atoms)
+      return atom as any
+    }
   }
 }
 
-export function defineModel <C extends ModelClass> (model: C) {
-  type M = InferClassModel <C>
-
-  const res: Partial <Adapter> = (arg: M) => {
-    const asa = usingModel (model)
-    return asa (arg)
-  }
-
-  res.__RECON__ = "adapter"
-
-  // @ts-ignore
-  res.viaRecon = (key: string) => {
-    registerModel (key, model)
-  }
-
-  return res as Adapter <M>
+export function Model$ <T extends ReconType> (
+  type: T, 
+  evaluate: () => InferValue <T>
+) {
+  return new ReconModelResolver <T> (type, evaluate)
 }

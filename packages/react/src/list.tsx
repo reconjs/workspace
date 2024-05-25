@@ -1,8 +1,8 @@
 import { Recon, ReconList } from "@reconjs/recon"
 import { AnyComponent } from "@reconjs/utils-react";
-import { usingListView } from "../using-list-view";
-import { usingClientListView } from "../client/defined-view";
-import { usingListViewAux } from "../lib/hooks/view"
+import { usingListView } from "./legacy/using-list-view";
+import { usingClientListView } from "./legacy/client/defined-view";
+import { usingListViewAux } from "./legacy/lib/hooks/view"
 
 type InferType <T extends ReconList> = T extends ReconList <infer X> ? X : never
 

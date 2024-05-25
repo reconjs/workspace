@@ -7,7 +7,7 @@ import {
   usingPrepasser,
 } from "@reconjs/recon"
 import { Func, Jsonny, memoize } from "@reconjs/utils"
-import { usingStore } from "../define-store"
+import { usingStore } from "./legacy/define-store"
 
 type Jsonified <T> = T extends Jsonny 
   ? T

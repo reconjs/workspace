@@ -11,16 +11,16 @@ import { RSC } from "@reconjs/utils-react"
 import { FunctionComponent } from "react"
 import { memoize } from "@reconjs/utils"
 
-import { ClientMode } from "../client/mode"
-import { usingDefinedClientView } from "../client/defined-view"
+import { ClientMode } from "./legacy/client/mode"
+import { usingDefinedClientView } from "./legacy/client/defined-view"
 
-import { ServerMode } from "../server/mode"
-import { usingDefinedServerView } from "../server/defined-view"
+import { ServerMode } from "./legacy/server/mode"
+import { usingDefinedServerView } from "./legacy/server/defined-view"
 
-import { usingDefinedStaticView } from "../static/defined-view"
-import { StaticMode } from "../static/mode"
+import { usingDefinedStaticView } from "./legacy/static/defined-view"
+import { StaticMode } from "./legacy/static/mode"
 
-import { useClientView } from "../client/use-view"
+import { useClientView } from "./legacy/client/use-view"
 
 type AnyView = FunctionComponent <any>
 

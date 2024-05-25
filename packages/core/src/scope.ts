@@ -1,58 +1,97 @@
 import {
-  AdaptedSync,
+  AnyPrimitive,
   Atom,
-  InferModel,
-  InferProvider,
   Modelable,
-  Modeled,
+  Recon,
+  ReconHook,
+  ReconHookResolver,
   ReconProvider,
-  getProviderRef,
   provide,
-  registerProvider,
-  usingAtom,
-  usingChild,
-  usingConstant,
+  usingPrepasser,
   usingProvided,
 } from "@reconjs/recon"
+import { memoize } from "@reconjs/utils"
 
-import { memoize, once } from "@reconjs/utils"
-
-
-
-// TODO: Allow for non-models
-export function defineScope <
-  F extends () => Atom <Modelable>,
-  R extends Modelable = InferModel <ReturnType <F>>,
-> (consume: F) {
-  const by: any = (arg: any) => {
-    provide (by, arg)
-    // TODO: Provide for any others
+const providerBy = memoize ((hook: ReconHook) => {
+  const provider: Partial <ReconProvider> = () => {
+    throw new Error ("No calling this")
   }
 
-  by.__RECON__ = "provider"
-  by.consume = consume.bind (null)
-
-  by.viaRecon = (key: string) => {
-    registerProvider (key, by)
+  provider.consume = () => {
+    console.group ("--- CONSUME ---")
+    const resolver = hook.factory () as ReconScopeResolver
+    console.groupEnd ()
+    return resolver.result as any
   }
 
-  return by as ReconProvider <R>
+  provider.__RECON__ = "provider"
+  return provider as ReconProvider
+})
+
+class ReconScope <T extends AnyPrimitive = AnyPrimitive> {
+  hook: ReconHook <T>
+  args: Recon[]
+
+  constructor (hook: ReconHook, ...args: Recon[]) {
+    if (args.length) {
+      throw new Error ("args support not implemented")
+    }
+
+    this.hook = hook
+    this.args = args
+  }
+
+  provide = (ref: T) => {
+    const atom = ref as any as Atom <Modelable>
+    const provider = providerBy (this.hook)
+
+    const prepass = usingPrepasser ()
+    if (prepass) {
+      // TODO:
+    }
+    else {
+      provide (provider, atom)
+    }
+  }
+
+  resolve = (): Recon <T> => {
+    const provider = providerBy (this.hook)
+    const prepass = usingPrepasser ()
+
+    if (prepass) {
+      // TODO: include args
+      prepass (provider.consume)
+      
+      const res: any = () => {
+        throw new Error ("You aren't supposed to call this.")
+      }
+
+      res.__RECON__ = "local" as const
+      return res
+    }
+    else {
+      return usingProvided (provider) as any
+    }
+  }
 }
 
+type InferRecon <R extends Recon> = R extends Recon <infer T> ? T : never
 
-// Consumer
+class ReconScopeResolver <
+  T extends AnyPrimitive = AnyPrimitive,
+> extends ReconHookResolver <ReconScope <T>> {
+  result: Recon <T>
 
-function getRealProvider <P extends ReconProvider> (scope: P) {
-  const key: string = (scope as any).__RECON_IMPORT__
-  const res = key 
-    ? getProviderRef (key)
-    : scope
-  return res as P
+  constructor (result: Recon <T>) {
+    super ()
+    this.result = result
+  }
+
+  resolve = (...args: Recon[]) => {
+    return new ReconScope <T> (this.hook, ...args)
+  }
 }
 
-export function usingScope <
-  P extends ReconProvider,
-> (scope: ReconProvider) {
-  const theProvided = usingProvided (getRealProvider (scope))
-  return theProvided as Atom <InferProvider <P>>
+export function Scope$ <T extends Recon> (ref: T) {
+  return new ReconScopeResolver <InferRecon <T>> (ref)
 }
