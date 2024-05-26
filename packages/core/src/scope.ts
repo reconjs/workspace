@@ -3,8 +3,8 @@ import {
   Atom,
   Modelable,
   Recon,
-  ReconHook,
-  ReconHookResolver,
+  ReconComponent,
+  ReconResolver,
   ReconProvider,
   provide,
   usingPrepasser,
@@ -12,7 +12,7 @@ import {
 } from "@reconjs/recon"
 import { memoize } from "@reconjs/utils"
 
-const providerBy = memoize ((hook: ReconHook) => {
+const providerBy = memoize ((hook: ReconComponent) => {
   const provider: Partial <ReconProvider> = () => {
     throw new Error ("No calling this")
   }
@@ -29,10 +29,10 @@ const providerBy = memoize ((hook: ReconHook) => {
 })
 
 class ReconScope <T extends AnyPrimitive = AnyPrimitive> {
-  hook: ReconHook <T>
+  hook: ReconComponent <T>
   args: Recon[]
 
-  constructor (hook: ReconHook, ...args: Recon[]) {
+  constructor (hook: ReconComponent, ...args: Recon[]) {
     if (args.length) {
       throw new Error ("args support not implemented")
     }
@@ -79,7 +79,7 @@ type InferRecon <R extends Recon> = R extends Recon <infer T> ? T : never
 
 class ReconScopeResolver <
   T extends AnyPrimitive = AnyPrimitive,
-> extends ReconHookResolver <ReconScope <T>> {
+> extends ReconResolver <ReconScope <T>> {
   result: Recon <T>
 
   constructor (result: Recon <T>) {

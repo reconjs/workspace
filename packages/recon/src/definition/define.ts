@@ -4,18 +4,17 @@ import { defineHook, isReconRunning } from "../hooks"
 
 import {
   InferReconType,
-  InferResolverType,
+  InferResolver,
   Recon,
-  ReconHook,
-  ReconHookResolver,
+  ReconComponent,
+  ReconResolver,
   ReconType,
-  Reconic,
 } from "./types"
 import { prepassOf } from "./prepass"
 
 interface ReconConstructorAux <P extends Recon[]> {
-  <F extends (...args: P) => ReconHookResolver>(fn: F): (...args: P) => InferResolverType <ReturnType <F>>
-  <F extends (...args: P) => Reconic>(): (...args: P) => ReturnType <F>
+  <F extends (...args: P) => ReconResolver>(fn: F): (...args: P) => InferResolver <ReturnType <F>>
+  // <F extends (...args: P) => Reconic>(): (...args: P) => ReturnType <F>
 }
 
 interface ReconConstructor {
@@ -24,9 +23,9 @@ interface ReconConstructor {
   }>
 
   <T extends String|Number> (Class: new () => T): ReconType <T>
-  <F extends () => ReconHookResolver>(fn: F): () => InferResolverType <ReturnType <F>>
+  <F extends () => ReconResolver>(fn: F): () => InferResolver <ReturnType <F>>
 
-  <F extends () => Reconic>(fn: F): () => ReturnType <F>
+  // <F extends () => Reconic>(fn: F): () => ReturnType <F>
   // <F extends Func>(fn: F): never
 }
 
@@ -35,9 +34,9 @@ function defineAux (factory: Func, types: ReconType[]) {
   const prepass = prepassOf (factory, types)
 
   // depending on the hook, we do different things.
-  if (prepass.result instanceof ReconHookResolver) {
-    const resolver = prepass.result as ReconHookResolver
-    resolver.hook = new ReconHook ({ factory })
+  if (prepass.result instanceof ReconResolver) {
+    const resolver = prepass.result as ReconResolver
+    resolver.hook = new ReconComponent ({ factory })
 
     return (..._args: Recon[]) => {
       // backwards compatibility

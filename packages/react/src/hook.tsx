@@ -2,8 +2,8 @@ import {
   Atom, 
   Modelable, 
   Recon, 
-  ReconHook, 
-  ReconHookResolver, 
+  ReconComponent, 
+  ReconResolver, 
   usingPrepasser,
 } from "@reconjs/recon"
 import { Func, Jsonny, memoize } from "@reconjs/utils"
@@ -19,7 +19,7 @@ type Jsonified <T> = T extends Jsonny
   }
   : null
 
-const execBy = memoize ((hook: ReconHook) => {
+const execBy = memoize ((hook: ReconComponent) => {
   return (..._args: any[]) => {
     const args: Recon[] = _args.map ((arg: any) => {
       if (arg.__RECON__ === "modeled") {
@@ -37,10 +37,10 @@ const execBy = memoize ((hook: ReconHook) => {
 })
 
 class ReconStore <T = any> {
-  hook: ReconHook <T>
+  hook: ReconComponent <T>
   args: Recon[]
 
-  constructor (hook: ReconHook, ...args: Recon[]) {
+  constructor (hook: ReconComponent, ...args: Recon[]) {
     if (args.length) {
       throw new Error ("args support not implemented")
     }
@@ -99,7 +99,7 @@ type InferType <
 
 class ReconStoreResolver <
   T = any
-> extends ReconHookResolver <ReconStore <T>> {
+> extends ReconResolver <ReconStore <T>> {
   use: () => T
 
   constructor (use: () => T) {

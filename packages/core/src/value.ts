@@ -2,14 +2,14 @@ import {
   Atom,
   Modelable,
   Recon,
-  ReconHook,
-  ReconHookResolver,
+  ReconComponent,
+  ReconResolver,
   usingDefinedSync,
   usingPrepasser,
 } from "@reconjs/recon"
 import { Jsonny, memoize } from "@reconjs/utils"
 
-const execBy = memoize ((hook: ReconHook) => {
+const execBy = memoize ((hook: ReconComponent) => {
   return (..._args: any[]) => {
     const args: Recon[] = _args.map ((arg: any) => {
       if (arg.__RECON__ === "modeled") {
@@ -32,7 +32,7 @@ const execBy = memoize ((hook: ReconHook) => {
 
 class ReconValueResolver <
   T extends Jsonny = Jsonny
-> extends ReconHookResolver <Recon <T>> {
+> extends ReconResolver <Recon <T>> {
   evaluate: () => T
 
   constructor (evaluate: () => T) {

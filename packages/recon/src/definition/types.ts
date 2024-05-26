@@ -20,11 +20,6 @@ export type ReconList <T extends AnyPrimitive = AnyPrimitive> = {
   (cursor?: symbol): T[]
 }
 
-export type ReconConstant <T = any> = {
-  __RECON__: "constant",
-  (): T,
-}
-
 export type Reconic = {
   __RECON__: string,
   (): any,
@@ -32,27 +27,27 @@ export type Reconic = {
 
 export type InferReconType <T> = T extends ReconType <infer M> ? M : never
 
-type ReconHookProps <T> = {
-  factory: (...args: Recon[]) => ReconHookResolver <T>,
+type ReconComponentProps <T> = {
+  factory: (...args: Recon[]) => ReconResolver <T>,
 }
 
-export class ReconHook <T = any> {
-  private props: ReconHookProps <T>
+export class ReconComponent <T = any> {
+  private props: ReconComponentProps <T>
   // TODO: Instructions
 
   get factory () {
     return this.props.factory
   }
 
-  constructor (props: ReconHookProps <T>) {
+  constructor (props: ReconComponentProps <T>) {
     this.props = props
   }
 }
 
-export abstract class ReconHookResolver <T = any> {
-  hook!: ReconHook <T>
+export abstract class ReconResolver <T = any> {
+  hook!: ReconComponent <T>
   invoke?: (...args: Recon[]) => T
   resolve!: (...args: Recon[]) => T
 }
 
-export type InferResolverType <T> = T extends ReconHookResolver <infer R> ? R : never
+export type InferResolver <T> = T extends ReconResolver <infer R> ? R : never

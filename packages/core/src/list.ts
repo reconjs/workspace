@@ -3,15 +3,15 @@ import {
   Modelable,
   Recon,
   ReconList,
-  ReconHook,
-  ReconHookResolver,
+  ReconComponent,
+  ReconResolver,
   ReconType,
   usingDefinedSync,
   usingPrepasser,
 } from "@reconjs/recon"
 import { memoize } from "@reconjs/utils"
 
-const execBy = memoize ((hook: ReconHook) => {
+const execBy = memoize ((hook: ReconComponent) => {
   return (..._args: any[]) => {
     const args: Recon[] = _args.map ((arg: any) => {
       if (arg.__RECON__ === "modeled") {
@@ -36,7 +36,7 @@ type InferValue <
 // TODO: Associate the type to the hook...
 class ReconListResolver <
   T extends ReconType = ReconType
-> extends ReconHookResolver <ReconList <ReturnType <T>>> {
+> extends ReconResolver <ReconList <ReturnType <T>>> {
   type: T
   evaluate: () => Array <InferValue <T>>
 

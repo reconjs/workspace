@@ -13,7 +13,6 @@ export type {
   ReconType,
   Recon,
   ReconList,
-  ReconConstant,
 } from "./types"
 
-export { ReconHookResolver, ReconHook } from "./types"
+export { ReconResolver, ReconComponent } from "./types"
