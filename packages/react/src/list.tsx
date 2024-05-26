@@ -11,5 +11,6 @@ export function useList$ <
   F extends (ref: Recon <InferType <L>>) => AnyComponent,
 > (list: L, factory: F): ReturnType <F> {
   // @ts-ignore
-  return usingClientListView (list, factory)
+  throw new Error ("useList$ is not implemented")
+  // return usingClientListView (list, factory)
 }

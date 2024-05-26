@@ -43,7 +43,7 @@ class ReconValueResolver <
   resolve = (...args: Recon[]): Recon <T> => {
     const atoms = args as any[] as Atom <Modelable>[]
 
-    const exec = execBy (this.hook)
+    const exec = execBy (this.component)
     const prepass = usingPrepasser ()
 
     if (prepass) {

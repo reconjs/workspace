@@ -95,7 +95,7 @@ export function prepassOf (factory: Func, types: ReconType[]) {
           throw new Error ("Not allowed")
         }
 
-        ref.__RECON__ = "prepass-ref"
+        ref.__RECON__ = "local"
         ref.prepass = { kind: "argument", index }
 
         // TODO: update type

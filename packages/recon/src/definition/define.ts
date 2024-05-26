@@ -36,7 +36,7 @@ function defineAux (factory: Func, types: ReconType[]) {
   // depending on the hook, we do different things.
   if (prepass.result instanceof ReconResolver) {
     const resolver = prepass.result as ReconResolver
-    resolver.hook = new ReconComponent ({ factory })
+    resolver.component = new ReconComponent ({ factory })
 
     return (..._args: Recon[]) => {
       // backwards compatibility

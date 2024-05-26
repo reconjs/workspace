@@ -5,16 +5,30 @@ import {
   Recon,
   ReconComponent,
   ReconResolver,
-  usingMode,
+  createRoot,
   usingPrepasser,
 } from "@reconjs/recon"
 import { RSC } from "@reconjs/utils-react"
-import { FunctionComponent, memo, use, useMemo } from "react"
+import { FunctionComponent, memo, useMemo } from "react"
 import { memoize } from "@reconjs/utils"
 
 type AnyView = FunctionComponent <any>
 
-/*
+// TODO: Make universal
+type ReconScope = {}
+
+function toRender (
+  scope: ReconScope,
+  component: ReconComponent,
+  ...args: Recon[]
+) {
+  return createRoot ().exec (() => {
+    const resolver = component.factory (...args)
+    const { render } = resolver as ReconViewResolver <AnyView>
+    return render
+  })
+}
+
 const execBy = memoize ((hook: ReconComponent) => {
   return (..._args: any[]) => {
     const args: Recon[] = _args.map ((arg: any) => {
@@ -27,30 +41,27 @@ const execBy = memoize ((hook: ReconComponent) => {
       return arg
     })
     
-    const resolver = hook.factory (...args) as ReconViewResolver <AnyView>
-    return resolver.render
+    const resolver = hook.factory (...args)
+    const { render } = resolver as ReconViewResolver <AnyView>
+    return render
   }
 })
-*/
 
 const viewBy = memoize ((
-  hook: ReconComponent,
+  component: ReconComponent,
   ...args: AnyPrimitive[]
 ) => {
-  const params: Recon[] = args.map ((arg): any => {
+  const refs: Recon[] = args.map ((arg): any => {
     const res = () => arg
-    res.__RECON__ = "ref"
+    res.__RECON__ = "local"
     return res
   })
 
+  // TODO: scope from context
+  const scope: ReconScope = {}
+
   function ReconView (props: any) {
-    // TODO: Get Context
-
-    const { render } = useMemo (() => {
-      const res = hook.factory (...params)
-      return res as ReconViewResolver <AnyView>
-    }, [])
-
+    const render = toRender (scope, component, ...refs)
     return render (props)
   }
 
@@ -58,10 +69,10 @@ const viewBy = memoize ((
 })
 
 const entryBy = memoize ((
-  hook: ReconComponent,
+  component: ReconComponent,
   ...args: AnyPrimitive[]
 ) => {
-  const ReconView = viewBy (hook, ...args)
+  const ReconView = viewBy (component, ...args)
 
   return function ReconEntry (props: any) {
     return <>
@@ -74,12 +85,12 @@ const entryBy = memoize ((
 class ReconViewResolver <V extends AnyView> extends ReconResolver <V> {
   render: V
 
-  constructor (view: V) {
+  constructor (render: V) {
     super ()
-    this.render = view
+    this.render = render
   }
 
-  invoke = (...args: Recon[]): V => {
+  invoke = (...args: Recon[]) => {
     // As a React hook
     if (RSC) {
       throw new Error ("Not allowed to call in RSC")
@@ -96,10 +107,11 @@ class ReconViewResolver <V extends AnyView> extends ReconResolver <V> {
       return args.map (x => x())
     }, [ ...args ])
 
-    return entryBy (this.hook, ...values)
+    const res = entryBy (this.component, ...values)
+    return res as V
   }
 
-  resolve = (...args: Recon[]): V => {
+  resolve = (...args: Recon[]) => {
     // TODO: Don't use atoms...
     // const fn = execBy (this.hook)
     const atoms = args as any[] as Atom<Modelable>[]
@@ -107,12 +119,14 @@ class ReconViewResolver <V extends AnyView> extends ReconResolver <V> {
     const prepass = usingPrepasser ()
 
     if (prepass) {
-      // return prepass (fn, ...args)
+      const fn = execBy (this.component)
+      return prepass (fn, ...args)
     }
     
     // const mode = usingMode ()
 
-    return viewBy (this.hook, ...args.map (a => a()))
+    const res = viewBy (this.component, ...args.map (a => a()))
+    return res as V
   }
 }
 

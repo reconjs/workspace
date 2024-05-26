@@ -45,7 +45,7 @@ export class ReconComponent <T = any> {
 }
 
 export abstract class ReconResolver <T = any> {
-  hook!: ReconComponent <T>
+  component!: ReconComponent <T>
   invoke?: (...args: Recon[]) => T
   resolve!: (...args: Recon[]) => T
 }

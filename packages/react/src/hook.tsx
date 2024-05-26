@@ -19,7 +19,7 @@ type Jsonified <T> = T extends Jsonny
   }
   : null
 
-const execBy = memoize ((hook: ReconComponent) => {
+const execBy = memoize (({ factory }: ReconComponent) => {
   return (..._args: any[]) => {
     const args: Recon[] = _args.map ((arg: any) => {
       if (arg.__RECON__ === "modeled") {
@@ -31,26 +31,26 @@ const execBy = memoize ((hook: ReconComponent) => {
       return arg
     })
 
-    const resolver = hook.factory (...args) as ReconStoreResolver
+    const resolver = factory (...args) as ReconStoreResolver
     return resolver.use
   }
 })
 
 class ReconStore <T = any> {
-  hook: ReconComponent <T>
+  component: ReconComponent <T>
   args: Recon[]
 
-  constructor (hook: ReconComponent, ...args: Recon[]) {
+  constructor (component: ReconComponent, ...args: Recon[]) {
     if (args.length) {
       throw new Error ("args support not implemented")
     }
 
-    this.hook = hook
+    this.component = component
     this.args = args
   }
 
   use = () => {
-    const exec = execBy (this.hook)
+    const exec = execBy (this.component)
     const prepass = usingPrepasser ()
 
     if (prepass) {
@@ -71,8 +71,8 @@ class ReconStore <T = any> {
   }
 
   resolve = (): Recon <Jsonified <T>> => {
-    const exec = execBy (this.hook)
-    const prepass = usingPrepasser ()
+    const exec = execBy (this.component)
+    const prepass = usingPrepasser()
 
     if (prepass) {
       // TODO: include args
@@ -108,7 +108,7 @@ class ReconStoreResolver <
   }
 
   resolve = (...args: Recon[]) => {
-    return new ReconStore <T> (this.hook, ...args)
+    return new ReconStore <T> (this.component, ...args)
   }
 }
 

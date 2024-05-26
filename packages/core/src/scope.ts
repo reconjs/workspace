@@ -88,10 +88,10 @@ class ReconScopeResolver <
   }
 
   resolve = (...args: Recon[]) => {
-    return new ReconScope <T> (this.hook, ...args)
+    return new ReconScope <T> (this.component, ...args)
   }
 }
 
 export function Scope$ <T extends Recon> (ref: T) {
-  return new ReconScopeResolver <InferRecon <T>> (ref)
+  return new ReconScopeResolver <InferRecon <T>> (ref as any)
 }
