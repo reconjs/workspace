@@ -73,9 +73,5 @@ export function usingAtom (factory: () => any) {
     return atom as Atom
   })
 
-  // usingEndEffect (() => {
-  //   theAtom ()
-  // })
-
   return theAtom
 }
