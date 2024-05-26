@@ -1,6 +1,5 @@
 import { AnyFunction, susync } from "@reconjs/utils"
 import { HANDLER, ReconHandler } from "./handler"
-import { defineHook } from "./define-hook"
 
 function debugOf (x: any, next?: string): string|undefined {
   // @ts-ignore
@@ -39,21 +38,6 @@ export class ReconStep {
   }
 }
 
-
-
-// Meta Hooks
-
-// const usingBegin = defineHook (() => {
-//   return () => {}
-// })
-
-// const usingEnd = defineHook (() => {
-//   return () => {}
-// })
-
-// debugOf (usingBegin, "usingBegin")
-// debugOf (usingBegin, "usingEnd")
-
 // Node
 
 class ReconNode extends ReconStep {
@@ -73,13 +57,7 @@ class ReconNode extends ReconStep {
     current = this
   
     try {
-      // const begin = usingBegin ()
-      // begin ()
-
       const res = factory ()
-
-      // const end = usingEnd ()
-      // end ()
 
       return res
     }
@@ -208,27 +186,4 @@ export function usingHandler <T extends AnyFunction> (hook: T) {
     }
     throw err
   }
-}
-
-
-
-// Begin & End
-// TODO: Are these even necessary anymore?
-
-export function usingBeginEffect (effect: () => void) {
-  const begin = usingBegin ()
-
-  handleHook (usingBegin, () => () => {
-    begin ()
-    effect ()
-  })
-}
-
-export function usingEndEffect (effect: () => void) {
-  const end = usingEnd ()
-
-  handleHook (usingEnd, () => () => {
-    end ()
-    effect ()
-  })
 }
