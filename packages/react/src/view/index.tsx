@@ -6,11 +6,14 @@ import {
   ReconComponent,
   ReconResolver,
   createRoot,
+  handle$,
+  usingChild,
   usingPrepasser,
 } from "@reconjs/recon"
 import { RSC } from "@reconjs/utils-react"
 import { FunctionComponent, memo, useMemo } from "react"
 import { memoize } from "@reconjs/utils"
+import { Value$ } from "../../../core/src"
 
 type AnyView = FunctionComponent <any>
 
@@ -23,6 +26,21 @@ function toRender (
   ...args: Recon[]
 ) {
   return createRoot ().exec (() => {
+    handle$ (Value$, (component: ReconComponent, ...args: Recon[]) => {
+      const node = usingChild()
+
+      const ref: any = () => {
+        const resolver: any = node.exec (() => {
+          return component.factory (...args)
+        })
+
+        return resolver.evaluate ()
+      }
+
+      ref.__RECON__ = "local"
+      return ref
+    })
+
     const resolver = component.factory (...args)
     const { render } = resolver as ReconViewResolver <AnyView>
     return render

@@ -1,6 +1,6 @@
-import { Func } from "@reconjs/utils"
+import { Func, memoize } from "@reconjs/utils"
 
-import { defineHook, isReconRunning } from "../hooks"
+import { defineHook, handleHook, isReconRunning } from "../hooks"
 
 import {
   InferReconType,
@@ -36,7 +36,7 @@ function defineAux (factory: Func, types: ReconType[]) {
   // depending on the hook, we do different things.
   if (prepass.result instanceof ReconResolver) {
     const resolver = prepass.result as ReconResolver
-    resolver.component = new ReconComponent ({ factory })
+    resolver.component = new ReconComponent ({ factory, prepass })
 
     return (..._args: Recon[]) => {
       // backwards compatibility
@@ -123,13 +123,43 @@ function define (...args: any[]) {
   throw new Error ("[recon] define does not accept these arguments")
 }
 
-
-
 export default define as ReconConstructor
 
 
-// usingDefined
 
-export const usingDefined = defineHook ((self: Func, ...args: any[]) => {
-  return self (...args)
+const byResolver = memoize ((_: any) => {
+  return defineHook ((_: ReconComponent, ...args: Recon[]): any => {
+    throw new Error ("handle$ required")
+  })
 })
+
+const byComponent = memoize ((component: ReconComponent) => {
+  const resolver = component.prepass.result
+  const using$ = resolver instanceof ReconResolver
+    ? byResolver (resolver.source)
+    : byResolver (null)
+
+  return defineHook ((...args: Recon[]) => {
+    return using$ (component, ...args)
+  })
+})
+
+export function handle$ (source: Func, handler: Func): void
+
+export function handle$ (component: ReconComponent, handler: Func): void
+
+export function handle$ (arg: any, handler: Func): void {
+  if (arg instanceof ReconComponent) {
+    const using$ = byComponent (arg)
+    handleHook (using$, handler)
+  }
+  else {
+    const using$ = byResolver (arg)
+    handleHook (using$, handler)
+  }
+}
+
+export function resolve$ (component: ReconComponent, ...args: Recon[]) {
+  const using$ = byComponent (component)
+  return using$ (...args)
+}

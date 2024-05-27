@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import recon, { get$ } from "@reconjs/core"
+import recon, { Value$, get$ } from "@reconjs/core"
 
 import { Hook$, View$ } from "@reconjs/react"
 import { useLocation } from "../use-location"
@@ -13,19 +13,36 @@ const viaPath$ = $(() => {
   })
 })
 
+const getCode$ = $(() => {
+  return Value$ (() => {
+    return 400
+  })
+})
+
 const useDefaultPage$ = $(() => {
+  const $code = getCode$()
+
   return View$ (() => {
-    return <p>Not Found</p>
+    const code = $code()
+    return (
+      <main className="flex flex-col items-start justify-start gap-8 p-8">
+        <p>Not Found</p>
+        <p>Code: {code}</p>
+      </main>
+    )
   })
 })
 
 const useApp$ = $(() => {
-  const $path = get$ (viaPath$())
+  // const $path = get$ (viaPath$())
 
   const Page = useDefaultPage$()
+
   /*
-  const Page = useView$ (() => {
+  const Page = use$ (() => {
+    const $path = use$ (() => usePath$())
     const path = $path()
+
     if (path === "/") return useHomePage$()
     return useDefaultPage$()
   })

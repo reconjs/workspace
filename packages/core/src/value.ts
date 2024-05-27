@@ -50,9 +50,12 @@ class ReconValueResolver <
       return prepass (exec, ...args)
     }
     else {
-      // TODO: move away from atoms
-      const atom = usingDefinedSync (exec, ...atoms)
-      return atom as any
+      const res: any = () => {
+        return this.evaluate ()
+      }
+
+      res.__RECON__ = "local"
+      return res
     }
   }
 }

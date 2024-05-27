@@ -2,7 +2,8 @@ import define from "./define"
 export { define }
 
 export {
-  usingDefined,
+  handle$,
+  resolve$,
 } from "./define"
 
 export { usingPrepasser } from "./prepass"

@@ -1,4 +1,5 @@
-import { Jsonny } from "@reconjs/utils"
+import { Func, Jsonny } from "@reconjs/utils"
+import { PrepassDef } from "./prepass"
 
 export type AnyPrimitive = String|Number
 
@@ -29,6 +30,7 @@ export type InferReconType <T> = T extends ReconType <infer M> ? M : never
 
 type ReconComponentProps <T> = {
   factory: (...args: Recon[]) => ReconResolver <T>,
+  prepass: PrepassDef,
 }
 
 export class ReconComponent <T = any> {
@@ -39,12 +41,19 @@ export class ReconComponent <T = any> {
     return this.props.factory
   }
 
+  get prepass () {
+    return this.props.prepass
+  }
+
   constructor (props: ReconComponentProps <T>) {
     this.props = props
   }
 }
 
-export abstract class ReconResolver <T = any> {
+export class ReconResolver <T = any> {
+  constructor () {}
+  source!: Func <ReconResolver>
+
   component!: ReconComponent <T>
   invoke?: (...args: Recon[]) => T
   resolve!: (...args: Recon[]) => T
