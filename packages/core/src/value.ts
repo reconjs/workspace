@@ -1,34 +1,8 @@
 import {
-  Atom,
-  Modelable,
   Recon,
-  ReconComponent,
   ReconResolver,
-  usingDefinedSync,
-  usingPrepasser,
 } from "@reconjs/recon"
-import { Jsonny, memoize } from "@reconjs/utils"
-
-const execBy = memoize ((hook: ReconComponent) => {
-  return (..._args: any[]) => {
-    const args: Recon[] = _args.map ((arg: any) => {
-      if (arg.__RECON__ === "modeled") {
-        const res: any = () => {
-          return arg.value
-          throw new Error ("You aren't supposed to call this.")
-        }
-        
-        res.__RECON__ = "local"
-        return res
-      }
-      
-      return arg
-    })
-
-    const resolver = hook.factory (...args) as ReconValueResolver
-    return resolver.evaluate
-  }
-})
+import { Jsonny } from "@reconjs/utils"
 
 class ReconValueResolver <
   T extends Jsonny = Jsonny
@@ -40,23 +14,25 @@ class ReconValueResolver <
     this.evaluate = evaluate
   }
 
-  resolve = (...args: Recon[]): Recon <T> => {
-    const atoms = args as any[] as Atom <Modelable>[]
-
-    const exec = execBy (this.component)
-    const prepass = usingPrepasser ()
-
-    if (prepass) {
-      return prepass (exec, ...args)
+  prepass = () => {
+    const res: any = () => {
+      throw new Error ("PREPASS")
     }
-    else {
-      const res: any = () => {
-        return this.evaluate ()
-      }
 
-      res.__RECON__ = "local"
-      return res
+    res.__RECON__ = "local"
+    return res as Recon <T>
+  }
+
+  resolve = (...args: Recon[]) => {
+    const resolver = this.component.factory (...args)
+    const { evaluate } = resolver as ReconValueResolver <T>
+
+    const res: any = () => {
+      return evaluate()
     }
+
+    res.__RECON__ = "local"
+    return res as Recon <T>
   }
 }
 

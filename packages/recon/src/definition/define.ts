@@ -10,7 +10,7 @@ import {
   ReconResolver,
   ReconType,
 } from "./types"
-import { prepassOf } from "./prepass"
+import { prepassOf, usingPrepasser } from "./prepass"
 
 interface ReconConstructorAux <P extends Recon[]> {
   <F extends (...args: P) => ReconResolver>(fn: F): (...args: P) => InferResolver <ReturnType <F>>
@@ -36,9 +36,10 @@ function defineAux (factory: Func, types: ReconType[]) {
   // depending on the hook, we do different things.
   if (prepass.result instanceof ReconResolver) {
     const resolver = prepass.result as ReconResolver
-    resolver.component = new ReconComponent ({ factory, prepass })
+    const component = new ReconComponent ({ factory, prepass })
+    resolver.component = component
 
-    return (..._args: Recon[]) => {
+    const res = (..._args: Recon[]) => {
       // backwards compatibility
       const args = _args.map ((arg: any) => {
         if (arg.__RECON__ === "modeled") {
@@ -51,8 +52,16 @@ function defineAux (factory: Func, types: ReconType[]) {
       })
 
       if (isReconRunning()) {
-        console.log ("--- Resolve ---")
-        return resolver.resolve (...args)
+        const prepass = usingPrepasser()
+
+        if (prepass) {
+          prepass (resolver.component, ...args)
+          return resolver.prepass (...args)
+        }
+        else {
+          console.log ("--- Resolve ---")
+          return resolver.resolve (...args)
+        }
       }
       else if (resolver.invoke) {
         console.log ("--- Invoke ---")
@@ -60,6 +69,11 @@ function defineAux (factory: Func, types: ReconType[]) {
       }
       else throw new Error ("Invalid hook call")
     }
+
+    // @ts-ignore
+    res.component = component
+
+    return res
   }
 
   // TODO: Constants
@@ -136,7 +150,7 @@ const byResolver = memoize ((_: any) => {
 const byComponent = memoize ((component: ReconComponent) => {
   const resolver = component.prepass.result
   const using$ = resolver instanceof ReconResolver
-    ? byResolver (resolver.source)
+    ? byResolver ((resolver as any).prototype)
     : byResolver (null)
 
   return defineHook ((...args: Recon[]) => {

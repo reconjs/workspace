@@ -1,24 +1,20 @@
 import { 
   AnyPrimitive,
-  Atom, 
-  Modelable,
   Recon,
   ReconComponent,
   ReconResolver,
   createRoot,
   handle$,
   usingChild,
-  usingPrepasser,
 } from "@reconjs/recon"
 import { RSC } from "@reconjs/utils-react"
 import { FunctionComponent, memo, useMemo } from "react"
 import { memoize } from "@reconjs/utils"
-import { Value$ } from "../../../core/src"
+import { Value$ } from "@reconjs/core"
+
+import { ReconScope } from "./look"
 
 type AnyView = FunctionComponent <any>
-
-// TODO: Make universal
-type ReconScope = {}
 
 function toRender (
   scope: ReconScope,
@@ -46,24 +42,6 @@ function toRender (
     return render
   })
 }
-
-const execBy = memoize ((hook: ReconComponent) => {
-  return (..._args: any[]) => {
-    const args: Recon[] = _args.map ((arg: any) => {
-      if (arg.__RECON__ === "modeled") {
-        const res: any = () => arg.value
-        res.__RECON__ = "local"
-        return res
-      }
-      
-      return arg
-    })
-    
-    const resolver = hook.factory (...args)
-    const { render } = resolver as ReconViewResolver <AnyView>
-    return render
-  }
-})
 
 const viewBy = memoize ((
   component: ReconComponent,
@@ -129,21 +107,18 @@ class ReconViewResolver <V extends AnyView> extends ReconResolver <V> {
     return res as V
   }
 
-  resolve = (...args: Recon[]) => {
-    // TODO: Don't use atoms...
-    // const fn = execBy (this.hook)
-    const atoms = args as any[] as Atom<Modelable>[]
-
-    const prepass = usingPrepasser ()
-
-    if (prepass) {
-      const fn = execBy (this.component)
-      return prepass (fn, ...args)
+  prepass = (...args: Recon[]) => {
+    const res: any = () => {
+      throw new Error ("No bueno")
     }
-    
-    // const mode = usingMode ()
 
-    const res = viewBy (this.component, ...args.map (a => a()))
+    res.__RECON__ = "react.view"
+    return res
+  }
+
+  resolve = (...args: Recon[]) => {
+    const values = args.map (a => a())
+    const res = viewBy (this.component, ...values)
     return res as V
   }
 }

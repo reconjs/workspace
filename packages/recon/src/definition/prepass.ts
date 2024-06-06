@@ -1,28 +1,15 @@
 import { Func } from "@reconjs/utils"
 
 import { createRoot, defineHook, handleHook } from "../hooks"
-import { AnyPrimitive, Recon, ReconType } from "./types"
-
-export type PrepassRef = {
-  from: "argument"|"hook",
-  index: number,
-}
-
-export type PrepassHook = {
-  hook: Func,
-  args: Array <PrepassRef>,
-}
-
-export type PrepassResult = {
-  invoke?: Func,
-  prepass: Func,
-}
-
-export type PrepassDef = {
-  args: Array <ReconType>,
-  hooks: Array <PrepassHook>,
-  result: PrepassResult,
-}
+import {
+  AnyPrimitive,
+  PrepassDef,
+  PrepassHook,
+  PrepassRef,
+  Recon,
+  ReconComponent,
+  ReconType
+} from "./types"
 
 const MAP = new Map <Func, PrepassDef> ()
 
@@ -51,10 +38,10 @@ export function usingPrepasser () {
   const list = usingPrepassHookList ()
   if (list === NEVER_LIST) return
 
-  return (hook: Func, ...args: Recon<AnyPrimitive>[]) => {
+  return (component: ReconComponent, ...args: Recon<AnyPrimitive>[]) => {
     const index = list.length
     list.push ({
-      hook,
+      component,
       args: prepassOfRefs (args),
     })
 
@@ -62,13 +49,10 @@ export function usingPrepasser () {
       throw new Error ("DO NOT USE")
     }
 
-    res.__RECON__ = "prepass-ref"
+    res.__RECON__ = "local"
     res.prepass = { kind: "hook", index }
 
     return res
-
-    // TODO: more sophisticated...
-    // return result.prepass (...args)
   }
 }
 

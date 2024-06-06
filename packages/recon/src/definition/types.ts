@@ -1,5 +1,4 @@
 import { Func, Jsonny } from "@reconjs/utils"
-import { PrepassDef } from "./prepass"
 
 export type AnyPrimitive = String|Number
 
@@ -28,6 +27,9 @@ export type Reconic = {
 
 export type InferReconType <T> = T extends ReconType <infer M> ? M : never
 
+
+// COMPONENT
+
 type ReconComponentProps <T> = {
   factory: (...args: Recon[]) => ReconResolver <T>,
   prepass: PrepassDef,
@@ -50,13 +52,39 @@ export class ReconComponent <T = any> {
   }
 }
 
-export class ReconResolver <T = any> {
-  constructor () {}
-  source!: Func <ReconResolver>
 
+// PREPASS
+
+export type PrepassRef = {
+  from: "argument"|"hook",
+  index: number,
+}
+
+export type PrepassHook = {
+  component: ReconComponent,
+  args: Array <PrepassRef>,
+}
+
+export type PrepassResult = {
+  invoke?: Func,
+  prepass: Func,
+}
+
+export type PrepassDef = {
+  args: Array <ReconType>,
+  hooks: Array <PrepassHook>,
+  result: PrepassResult,
+}
+
+
+// RESOLVER
+
+export class ReconResolver <T = any> {
+  // TODO: component should be an arg
   component!: ReconComponent <T>
-  invoke?: (...args: Recon[]) => T
-  resolve!: (...args: Recon[]) => T
+  invoke?: (...args: Recon[]) => T // when called outside of ReconJS
+  prepass!: (...args: Recon[]) => T // when called during definition
+  resolve!: (...args: Recon[]) => T // gets the wrapped version
 }
 
 export type InferResolver <T> = T extends ReconResolver <infer R> ? R : never
