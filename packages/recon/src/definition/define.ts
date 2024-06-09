@@ -3,6 +3,7 @@ import { Func, memoize } from "@reconjs/utils"
 import { defineHook, handleHook, isReconRunning } from "../hooks"
 
 import {
+  AnyPrimitive,
   InferReconType,
   InferResolver,
   Recon,
@@ -27,6 +28,82 @@ interface ReconConstructor {
 
   // <F extends () => Reconic>(fn: F): () => ReturnType <F>
   // <F extends Func>(fn: F): never
+}
+
+function doo <T> (func: () => T) {
+  return func()
+}
+
+export class ReconTypeResolver <
+  C extends AnyPrimitive,
+> extends ReconResolver <Recon <C>> {
+  type: ReconType <C>
+  exec: Func <C>
+  args: Recon[]
+  
+  constructor (type: ReconType <C>, exec: Func, ...args: Recon[]) {
+    super ()
+    this.type = type
+    this.exec = exec
+    this.args = args
+  }
+
+  prepass = () => {
+    const res: any = () => {
+      throw new Error ("PREPASS")
+    }
+
+    res.__RECON__ = "local"
+    return res as Recon <C>
+  }
+
+  resolve = (...args: Recon[]) => {
+    const resolver = doo (() => {
+      const res: ReconResolver = this.component.factory (...args)
+      return res as ReconTypeResolver <C>
+    })
+
+    const { exec } = resolver
+    const values = args.map (a => a())
+    const res: any = () => exec (...values)
+
+    res.__RECON__ = "local"
+    return res as Recon <C>
+  }
+}
+
+function defineResolver (
+  type: ReconType,
+  exec: Func,
+  deps: ReconType[],
+) {
+  return (...args: Recon[]) => {
+    // TODO: assert args match deps' types...
+    return new ReconTypeResolver (type, exec, ...args)
+  }
+}
+
+function defineType (arg: any) {
+  let jstype = "undefined"
+  if (arg.prototype instanceof String) jstype = "string"
+  if (arg.prototype instanceof Number) jstype = "number"
+
+  const type: any = (x: any, deps?: any[]) => {
+    if (typeof x === "function") {
+      return defineResolver (type, x, deps ?? [])
+    }
+    if (typeof x !== jstype) {
+      throw new Error (`Expected ${jstype}`)
+    }
+
+    const ref: any = () => x
+
+    ref.__RECON__ = "local"
+    return ref
+  }
+
+  type.__RECON__ = "type"
+  return type as ReconType
 }
 
 function defineAux (factory: Func, types: ReconType[]) {
@@ -59,12 +136,12 @@ function defineAux (factory: Func, types: ReconType[]) {
           return resolver.prepass (...args)
         }
         else {
-          console.log ("--- Resolve ---")
+          // console.log ("--- Resolve ---")
           return resolver.resolve (...args)
         }
       }
       else if (resolver.invoke) {
-        console.log ("--- Invoke ---")
+        // console.log ("--- Invoke ---")
         return resolver.invoke (...args)
       }
       else throw new Error ("Invalid hook call")
@@ -108,26 +185,7 @@ function define (...args: any[]) {
       return defineAux (args[0], [])
     }
     else if (arg.prototype instanceof String) {
-      const res: any = (x: any) => {
-        if (typeof x !== "string") {
-          throw new Error ("String expected.")
-        }
-        return x as string
-      }
-
-      res.__RECON__ = "type"
-      return res as ReconType
-    }
-    else if (arg.prototype instanceof Number) {
-      const res: any = (x: any) => {
-        if (typeof x !== "number") {
-          throw new Error ("Number expected.")
-        }
-        return x as number
-      }
-
-      res.__RECON__ = "type"
-      return res as ReconType
+      return defineType (arg)
     }
     else {
       throw new Error ("[$] argument extends an unexpected class")

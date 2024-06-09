@@ -1,10 +1,29 @@
 import { Func, Jsonny } from "@reconjs/utils"
+import { ReconTypeResolver } from "./define"
 
 export type AnyPrimitive = String|Number
 
-export type ReconType <C extends AnyPrimitive = AnyPrimitive> = {
+type ReturnTypes <A extends Func[]> = {
+  [K in keyof A]: ReturnType <A[K]>
+}
+
+type InferRefs <A extends ReconType[]> = {
+  [K in keyof A]: Recon <InferReconType <A[K]>>
+}
+
+// TODO: Async
+export type ReconType <
+  C extends AnyPrimitive = any
+> = {
   __RECON__: "type",
-  (arg: any): C,
+  (arg: ReturnType <Recon <C>>): Recon <C>,
+
+  <A extends ReconType[]> (
+    factory: (...args: ReturnTypes <InferRefs <A>>) => ReturnType <Recon <C>>, 
+    deps: A,
+  ): (...args: InferRefs <A>) => ReconTypeResolver <C>
+
+  (factory: () => C): () => Recon <C>
 }
 
 export type Recon <T extends Jsonny|AnyPrimitive = AnyPrimitive> = {
