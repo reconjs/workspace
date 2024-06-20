@@ -3,6 +3,8 @@ import recon, { Value$, get$ } from "@reconjs/core"
 
 import { Hook$, View$ } from "@reconjs/react"
 import { useLocation } from "../use-location"
+import { ErrorBoundary } from "@reconjs/utils-react"
+import { useCounter$ } from "./counter"
 
 const $ = recon ("@/app")
 
@@ -36,13 +38,21 @@ const getCode$ = $(() => {
 const useDefaultPage$ = $(() => {
   const $code = getCode$()
 
+  const Counter = useCounter$()
+
   return View$ ((props: PropsWithChildren) => {
     const code = $code()
+
     return (
       <main className="flex flex-col items-start justify-start gap-8 p-8">
         <p>Not Found</p>
         <p>Code: {code}</p>
-        {props.children}
+        <div>{props.children}</div>
+        <ErrorBoundary fallback={<p>Error...</p>}>
+          <Suspense fallback={"Loading..."}>
+            <Counter />
+          </Suspense>
+        </ErrorBoundary>
       </main>
     )
   })

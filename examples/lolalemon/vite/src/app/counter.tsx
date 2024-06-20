@@ -1,11 +1,11 @@
 import recon, { get$ } from "@reconjs/core"
 import { Hook$, View$, use$ } from "@reconjs/react"
-import { PropsOf } from "@reconjs/utils-react"
-import { Suspense, useState } from "react"
+import { ErrorBoundary, PropsOf } from "@reconjs/utils-react"
+import { Suspense, use, useState } from "react"
 
 const $ = recon ("@/app/counter")
 
-const viaCounting$ = $(() => {
+const getCounter$ = $(() => {
   return Hook$ (() => {
     const [ count, setCount ] = useState (0)
     return { count, setCount }
@@ -15,11 +15,10 @@ const viaCounting$ = $(() => {
 const CLASS = "w-8 flex flex-row items-center justify-center"
 
 const useCountDisplay$ = $(() => {
-  const $Counting = viaCounting$()
-  const $count = get$ ($Counting)
+  const $counter = getCounter$()
 
   return View$ (() => {
-    const { count } = $count()
+    const { count } = $counter()
     return (
       <div className={CLASS}>
         {count}
@@ -29,11 +28,11 @@ const useCountDisplay$ = $(() => {
 })
 
 const useIncrementButton$ = $(() => {
-  const $Counting = viaCounting$()
-  const useCounting = use$ ($Counting)
+  const $counter = getCounter$()
+  const ctx = use$ ($counter)
 
   return View$ (() => {
-    const { count, setCount } = useCounting()
+    const { count, setCount } = use (ctx)
 
     const btn: PropsOf <"button"> = {}
     btn.type = "button"
@@ -49,7 +48,7 @@ const useIncrementButton$ = $(() => {
   })
 })
 
-const useCounter$ = $(() => {
+export const useCounter$ = $(() => {
   const CountDisplay = useCountDisplay$()
   const IncrementButton = useIncrementButton$()
 
@@ -58,17 +57,10 @@ const useCounter$ = $(() => {
       <div className="w-fit flex flex-row border rounded-full divide-x">
         <button type="button" className={CLASS}>-</button>
         <CountDisplay />
-        <IncrementButton />
+        <ErrorBoundary fallback={<p>ERR INCR</p>}>
+          <IncrementButton />
+        </ErrorBoundary>
       </div>
     )
   })
 })
-
-export function Counter () {
-  const View = useCounter$()
-  return (
-    <Suspense fallback="Loading Counter...">
-      <View />
-    </Suspense>
-  )
-}

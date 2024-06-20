@@ -12,7 +12,9 @@ import { FunctionComponent, memo, useMemo } from "react"
 import { memoize } from "@reconjs/utils"
 import { Value$ } from "@reconjs/core"
 
-import { ReconScope } from "./look"
+import { ReconManager } from "./look"
+
+type ReconScope = {}
 
 type AnyView = FunctionComponent <any>
 
@@ -72,7 +74,7 @@ const entryBy = memoize ((
 
   return function ReconEntry (props: any) {
     return <>
-      {/*<ReconOrchestrator />*/}
+      <ReconManager {...{ component, args }} />
       <ReconView {...props} />
     </>
   }

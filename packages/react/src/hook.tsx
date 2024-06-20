@@ -1,13 +1,14 @@
 import { 
-  Atom, 
-  Modelable, 
   Recon, 
   ReconComponent, 
   ReconResolver, 
-  usingPrepasser,
 } from "@reconjs/recon"
-import { Func, Jsonny, memoize } from "@reconjs/utils"
-import { usingStore } from "./legacy/define-store"
+import { Jsonny, memoize } from "@reconjs/utils"
+import { Context, createContext } from "react"
+
+function doo <T> (func: () => T) {
+  return func()
+}
 
 type Jsonified <T> = T extends Jsonny 
   ? T
@@ -19,106 +20,62 @@ type Jsonified <T> = T extends Jsonny
   }
   : null
 
+/*
 const execBy = memoize (({ factory }: ReconComponent) => {
-  return (..._args: any[]) => {
-    const args: Recon[] = _args.map ((arg: any) => {
-      if (arg.__RECON__ === "modeled") {
-        const res: any = () => arg.value
-        res.__RECON__ = "local"
-        return res
-      }
-      
-      return arg
+  return (...args: Recon[]) => {
+    const resolver = doo (() => {
+      const x = factory (...args)
+      return x as ReconHookResolver
     })
 
-    const resolver = factory (...args) as ReconStoreResolver
     return resolver.use
   }
 })
+*/
 
-class ReconStore <T = any> {
-  component: ReconComponent <T>
-  args: Recon[]
-
-  constructor (component: ReconComponent, ...args: Recon[]) {
-    if (args.length) {
-      throw new Error ("args support not implemented")
-    }
-
-    this.component = component
-    this.args = args
-  }
-
-  use = () => {
-    const exec = execBy (this.component)
-    const prepass = usingPrepasser ()
-
-    if (prepass) {
-      // TODO: include args
-      prepass (exec, ...this.args)
-      
-      return (): T => {
-        throw new Error ("You aren't supposed to call this.")
-      }
-    }
-    else {
-      const atoms = this.args as any[] as Atom<Modelable>[]
-      const atom = usingStore (exec, ...atoms)
-      return (): T => {
-        return atom()
-      }
-    }
-  }
-
-  resolve = (): Recon <Jsonified <T>> => {
-    const exec = execBy (this.component)
-    const prepass = usingPrepasser()
-
-    if (prepass) {
-      // TODO: include args
-      prepass (exec)
-      
-      const res: any = () => {
-        throw new Error ("You aren't supposed to call this.")
-      }
-
-      res.__RECON__ = "local" as const
-      return res
-    }
-    else {
-      const atoms = this.args as any[] as Atom<Modelable>[]
-      const atom = usingStore (exec, ...atoms) as any
-      return atom as any
-    }
-  }
+type ReconHook <T> = Recon <Jsonified <T>> & {
+  context: Context <T>
 }
 
-type InferType <
-  S extends ReconStore
-> = S extends ReconStore <infer T> ? T : never
-
-class ReconStoreResolver <
+class ReconHookResolver <
   T = any
-> extends ReconResolver <ReconStore <T>> {
+> extends ReconResolver <ReconHook <T>> {
   use: () => T
+  context: Context <T>
 
   constructor (use: () => T) {
     super ()
     this.use = use
+    this.context = createContext <T> (undefined as any)
+  }
+
+  prepass = (...args: Recon[]) => {
+    const res: any = () => {
+      throw new Error ("No bueno")
+    }
+
+    res.context = this.context
+
+    res.__RECON__ = "local"
+    return res as ReconHook <T>
   }
 
   resolve = (...args: Recon[]) => {
-    return new ReconStore <T> (this.component, ...args)
+    const res: any = () => {
+      throw new Error ("No bueno")
+    }
+
+    res.context = this.context
+
+    res.__RECON__ = "local"
+    return res as ReconHook <T>
   }
 }
 
 export function Hook$ <T> (use: () => T) {
-  return new ReconStoreResolver <T> (use)
+  return new ReconHookResolver <T> (use)
 }
 
-export function use$ <
-  S extends ReconStore,
-> (store: S): () => InferType <S> {
-  if (!store?.use) throw new Error ("[use$] invalid argument")
-  return store.use()
+export function use$ <T> (ref: ReconHook <T>) {
+  return ref.context
 }
