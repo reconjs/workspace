@@ -1,0 +1,16 @@
+{
+  "name": "recon",
+  "private": true,
+  "version": "1.0.0",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "dependencies": {
+    "@reconjs/utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*"
+  }
+}
