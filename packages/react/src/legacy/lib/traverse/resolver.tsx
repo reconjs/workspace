@@ -5,7 +5,7 @@ import {
   handleHook,
   usingBroadlyAux,
   usingConstant,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { Func, Serial } from "@reconjs/utils"
 
 import { usingAtomLazily } from "../utils"

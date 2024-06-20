@@ -8,7 +8,7 @@ import {
   ReconType,
   usingDefinedSync,
   usingPrepasser,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { memoize } from "@reconjs/utils"
 
 const execBy = memoize ((hook: ReconComponent) => {

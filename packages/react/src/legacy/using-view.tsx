@@ -1,4 +1,4 @@
-import { Atom, InferAtomType, usingMode } from "@reconjs/recon"
+import { Atom, InferAtomType, usingMode } from "@reconjs/internals"
 import { AnyComponent } from "@reconjs/utils-react"
 
 import { ClientMode } from "./client/mode"

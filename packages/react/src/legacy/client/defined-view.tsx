@@ -13,7 +13,7 @@ import {
   usingChildFactory,
   usingConstant,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { useSyncExternalStore } from "@reconjs/utils-react"
 
 import { ReconStoreProvider } from "../define-store"

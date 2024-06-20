@@ -4,7 +4,7 @@ import {
   Modelable,
   defineHook,
   registerDefinition,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { presolve } from "@reconjs/utils"
 import { AnyViewDef } from "./types"
 

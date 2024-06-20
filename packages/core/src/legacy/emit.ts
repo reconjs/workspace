@@ -9,7 +9,7 @@ import {
   registerDefinition,
   usingDefinedAction,
   usingDefinedEvent,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { Vunc, susync } from "@reconjs/utils"
 

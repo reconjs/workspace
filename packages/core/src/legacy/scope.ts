@@ -13,7 +13,7 @@ import {
   usingChild,
   usingConstant,
   usingProvided,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { memoize, once } from "@reconjs/utils"
 

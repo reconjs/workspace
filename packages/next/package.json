@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@reconjs/core": "workspace:*",
-    "@reconjs/recon": "workspace:*",
+    "@reconjs/internals": "workspace:*",
     "@reconjs/react": "workspace:*",
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-react": "workspace:*",

@@ -14,7 +14,7 @@ import {
   usingProvided,
   usingProvider,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { AnyFunction, susync } from "@reconjs/utils"
 import { handleSync } from "./broad"
 

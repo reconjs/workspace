@@ -1,4 +1,4 @@
-import { Atom, InferClassModel, ModelClass, getModelClass, usingSerializedNode } from "@reconjs/recon"
+import { Atom, InferClassModel, ModelClass, getModelClass, usingSerializedNode } from "@reconjs/internals"
 import { AnyComponent } from "@reconjs/utils-react"
 import { preflush, susync } from "@reconjs/utils"
 

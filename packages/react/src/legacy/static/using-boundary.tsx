@@ -7,7 +7,7 @@ import {
   usingChild,
   usingSerializedNode,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { preflush, susync } from "@reconjs/utils"
 
 import { AnyViewDef, ReconProp } from "../types"

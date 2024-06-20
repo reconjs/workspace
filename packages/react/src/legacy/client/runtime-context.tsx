@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ReconNode } from "@reconjs/recon"
+import { ReconNode } from "@reconjs/internals"
 
 import {
   PropsOf,

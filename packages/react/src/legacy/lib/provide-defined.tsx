@@ -8,7 +8,7 @@ import {
   handleAtoms,
   Atom,
   Modelable,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { Func, loadPromise } from "@reconjs/utils"
 import { usingFunction } from "./utils"

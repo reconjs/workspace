@@ -10,7 +10,7 @@ import {
   usingDefinedSync,
   usingDefinedAsync,
   usingServerAtom
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { susync } from "@reconjs/utils"
 
 type AnyFactory <T = any> = (...args: Modelable[]) => () => T

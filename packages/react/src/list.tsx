@@ -1,4 +1,4 @@
-import { Recon, ReconList } from "@reconjs/recon"
+import { Recon, ReconList } from "@reconjs/internals"
 import { AnyComponent } from "@reconjs/utils-react";
 import { usingListView } from "./legacy/using-list-view";
 import { usingClientListView } from "./legacy/client/defined-view";

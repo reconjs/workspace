@@ -17,7 +17,7 @@ import {
   usingMode,
   usingProxyAtom,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { PropsWithChildren, Suspense, useMemo } from "react"
 import { 
   AnyFunction, 

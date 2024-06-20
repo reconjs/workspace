@@ -1,4 +1,4 @@
-import { defineHook, handleHook, usingChild, usingDefinedSync, usingHandler } from "@reconjs/recon"
+import { defineHook, handleHook, usingChild, usingDefinedSync, usingHandler } from "@reconjs/internals"
 import { Func0 } from "@reconjs/utils"
 import { handleStore } from "./define-store"
 import { RSC } from "@reconjs/utils-react"

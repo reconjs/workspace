@@ -4,7 +4,7 @@ import {
   Atom, 
   Modelable, 
   defineHook,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import {
   AnyListAtom, 
   AnyViewFactory, 

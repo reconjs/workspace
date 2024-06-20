@@ -1,7 +1,7 @@
 import { AnyComponent } from "@reconjs/utils-react"
 import { RSC } from "@reconjs/utils-react"
 import { presolve } from "@reconjs/utils"
-import { usingMode } from "@reconjs/recon"
+import { usingMode } from "@reconjs/internals"
 
 import { AnyViewDef } from "./types"
 import { StaticMode } from "./static/mode"

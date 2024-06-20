@@ -3,7 +3,7 @@ import {
   usingServerAtom,
   usingServerImport,
   createRoot
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import {
   AnyFunction,

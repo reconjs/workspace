@@ -9,7 +9,7 @@ import {
   usingDefinedAction,
   usingDefinedEvent,
   usingHandler,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { defineTraversal } from "./traverse"
 import { Serial, memoize, susync } from "@reconjs/utils"
 

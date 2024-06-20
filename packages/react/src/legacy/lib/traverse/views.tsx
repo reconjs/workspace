@@ -6,7 +6,7 @@ import {
   usingChild, 
   usingConstant,
   usingHandler,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { Func, Serial, memoize, susync } from "@reconjs/utils"
 
 import {

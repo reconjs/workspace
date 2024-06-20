@@ -1,4 +1,4 @@
-export { Model } from "@reconjs/recon"
+export { Model } from "@reconjs/internals"
 
 export type { Collection, Optional } from "./adapters"
 

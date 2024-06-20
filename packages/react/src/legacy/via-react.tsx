@@ -1,6 +1,6 @@
 import { presolve } from "@reconjs/utils"
 import { RSC } from "@reconjs/utils-react"
-import { registerDefinition } from "@reconjs/recon"
+import { registerDefinition } from "@reconjs/internals"
 
 import { useClientView } from "./client/use-view"
 import { AnyViewDef } from "./types"

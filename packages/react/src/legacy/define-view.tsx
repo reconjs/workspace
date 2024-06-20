@@ -1,4 +1,4 @@
-import { Atoms, Modelable, usingMode } from "@reconjs/recon"
+import { Atoms, Modelable, usingMode } from "@reconjs/internals"
 import { FunctionComponent } from "react"
 import { AnyComponent, PropsOf } from "@reconjs/utils-react"
 

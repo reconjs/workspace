@@ -24,7 +24,7 @@ import {
   manifestBy,
   usingDefinedEvent,
   getConsumers,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { 
   Fanc,

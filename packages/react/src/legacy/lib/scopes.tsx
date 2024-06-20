@@ -5,7 +5,7 @@ import {
   usingProvided,
   usingProvider,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { memoize, uniq } from "@reconjs/utils"
 import { SerialScope } from "../types"
 import { usingExecutableBy, usingFunction } from "./utils"

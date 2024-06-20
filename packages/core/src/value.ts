@@ -1,7 +1,7 @@
 import {
   Recon,
   ReconResolver,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { Jsonny } from "@reconjs/utils"
 
 class ReconValueResolver <

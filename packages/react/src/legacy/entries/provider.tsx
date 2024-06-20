@@ -14,7 +14,7 @@ import {
   usingConstant,
   usingContext,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { 
   useInitial, 
   useMemoDeep, 

@@ -9,7 +9,7 @@ import {
   provide,
   usingPrepasser,
   usingProvided,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { memoize } from "@reconjs/utils"
 
 const providerBy = memoize ((hook: ReconComponent) => {

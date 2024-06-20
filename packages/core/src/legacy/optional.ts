@@ -4,6 +4,6 @@ import {
   ModelClass,
   Modelable,
   Modeled,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 

@@ -18,7 +18,7 @@ import {
   usingDefinedEvent,
   usingDefinedSync,
   usingProvided,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { handleStore } from "../legacy/define-store"
 
 function usingRef <T = any> () {

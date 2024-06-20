@@ -1,5 +1,5 @@
 import { AnyComponent, useInitial } from "@reconjs/utils-react"
-import { Atom, Modelable, getModelClass } from "@reconjs/recon"
+import { Atom, Modelable, getModelClass } from "@reconjs/internals"
 
 import { AnyViewDef, ReconProp } from "../types"
 import { useClientView } from "./use-view"

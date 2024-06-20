@@ -1,4 +1,4 @@
-import { Recon } from "@reconjs/recon"
+import { Recon } from "@reconjs/internals"
 
 export function get$ <
   T extends { resolve: () => any }

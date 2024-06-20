@@ -5,7 +5,7 @@ import {
   Modelable,
   Modeled,
   SerializedNode,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { FunctionComponent } from "react"
 import { Collection } from "@reconjs/core"
 import { Serial } from "@reconjs/utils"

@@ -14,7 +14,7 @@ import {
   Modeled,
   Modelable,
   usingDefinedSync,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import {
   Func,

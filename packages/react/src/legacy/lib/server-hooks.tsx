@@ -7,7 +7,7 @@ import {
   usingConstant,
   usingServerAtom,
   usingServerImport,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { AnyFunction, loadPromise, susync } from "@reconjs/utils"
 import { handleServerImport } from "./server-import"
 

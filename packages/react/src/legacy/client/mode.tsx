@@ -1,3 +1,3 @@
-import { ReconMode } from "@reconjs/recon"
+import { ReconMode } from "@reconjs/internals"
 
 export class ClientMode extends ReconMode {}

@@ -1,7 +1,7 @@
 import {
   Atoms,
   defineHook,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { Serial } from "@reconjs/utils"
 

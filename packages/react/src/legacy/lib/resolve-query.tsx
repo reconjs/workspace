@@ -6,7 +6,7 @@ import {
   usingConstant,
   usingServerAtom,
   usingStack,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import {
   Func,
   Serial,

@@ -1,5 +1,5 @@
 import { memoize } from "@reconjs/utils"
-import { Atoms, ReconNode, createNode } from "@reconjs/recon"
+import { Atoms, ReconNode, createNode } from "@reconjs/internals"
 import { memo, useId, useMemo } from "react"
 
 import { AnyViewDef } from "../types"

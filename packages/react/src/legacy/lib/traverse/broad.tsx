@@ -7,7 +7,7 @@ import {
   usingBroadlyAux,
   usingChild,
   usingConstant,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { Serial } from "@reconjs/utils"
 
 import { usingAtomLazily, usingFunction, usingLazily } from "../utils"

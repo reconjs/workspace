@@ -7,7 +7,7 @@ import {
   InferAdapter,
   usingBroadlyAux,
   Adapted,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 export interface Collection <M extends Modelable = Modelable> extends Modelable {
   model: ModelClass <M>

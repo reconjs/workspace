@@ -19,7 +19,7 @@ import {
   usingDefinedAsync,
   MANIFESTS,
   setServerPreloader,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import {
   Serial,

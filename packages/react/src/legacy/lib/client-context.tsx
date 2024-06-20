@@ -1,4 +1,4 @@
-import { ReconContext, ReconNode, getDefinitionKey, usingChild, usingConstant, usingStack } from "@reconjs/recon"
+import { ReconContext, ReconNode, getDefinitionKey, usingChild, usingConstant, usingStack } from "@reconjs/internals"
 import {
   AnyFunction,
   Source,

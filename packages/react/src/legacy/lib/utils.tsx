@@ -1,4 +1,4 @@
-import { createNode, usingAtom, usingChild, usingConstant } from "@reconjs/recon"
+import { createNode, usingAtom, usingChild, usingConstant } from "@reconjs/internals"
 import { Func, loadPromise, memoize } from "@reconjs/utils"
 
 function usingRef <T = any> () {

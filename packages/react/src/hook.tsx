@@ -2,7 +2,7 @@ import {
   Recon, 
   ReconComponent, 
   ReconResolver, 
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { Jsonny, memoize } from "@reconjs/utils"
 import { Context, createContext } from "react"
 

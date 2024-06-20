@@ -1,4 +1,4 @@
-import { ReconComponent, define } from "@reconjs/recon"
+import { ReconComponent, define } from "@reconjs/internals"
 import { Func } from "@reconjs/utils"
 
 export { get$, provide$ } from "./hooks"
@@ -7,7 +7,7 @@ export { Model$ } from "./model"
 export { Scope$ } from "./scope"
 export { Value$ } from "./value"
 
-export { isReconRunning } from "@reconjs/recon"
+export { isReconRunning } from "@reconjs/internals"
 
 const COMPONENTS = {} as Record <string, any>
 

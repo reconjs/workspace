@@ -6,7 +6,7 @@ import {
   createRoot,
   handle$,
   usingChild,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { RSC } from "@reconjs/utils-react"
 import { FunctionComponent, memo, useMemo } from "react"
 import { memoize } from "@reconjs/utils"

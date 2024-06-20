@@ -16,7 +16,7 @@ import {
   usingConstant,
   usingHandler,
   usingSerializedNode,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { AnyComponent } from "@reconjs/utils-react"
 

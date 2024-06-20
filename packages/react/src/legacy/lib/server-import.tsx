@@ -1,4 +1,4 @@
-import { handleHook, usingServerImport } from "@reconjs/recon"
+import { handleHook, usingServerImport } from "@reconjs/internals"
 import { AnyFunction } from "@reconjs/utils"
 
 const HOOKS: Record <string, AnyFunction> = {}

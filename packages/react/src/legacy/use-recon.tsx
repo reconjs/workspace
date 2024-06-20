@@ -4,7 +4,7 @@ import {
   InferAdapter,
   InferAtomizableType,
   fromAdaptableSync,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import { RSC } from "@reconjs/utils-react"
 import { useMemo } from "react"
 

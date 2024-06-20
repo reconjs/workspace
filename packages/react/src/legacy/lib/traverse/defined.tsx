@@ -12,7 +12,7 @@ import {
   usingDefinedAction,
   usingDefinedAsync,
   usingDefinedEvent,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import {
   AnyFunction,
   Func0,

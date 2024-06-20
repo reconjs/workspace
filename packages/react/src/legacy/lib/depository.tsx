@@ -1,4 +1,4 @@
-import { defineHook, usingConstant, handleHook } from "@reconjs/recon"
+import { defineHook, usingConstant, handleHook } from "@reconjs/internals"
 import { Depository } from "./using-query"
 import { Store, createStore, isEqual, omit } from "@reconjs/utils"
 

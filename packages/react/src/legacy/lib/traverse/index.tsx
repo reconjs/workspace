@@ -12,7 +12,7 @@ import {
   usingChild,
   usingConstant,
   usingMode,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import {
   AnyFunction,
   Func,

@@ -5,7 +5,7 @@ import {
   InferClassModel,
   ModelClass,
   registerModel,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 function usingModel <C extends ModelClass> (
   model: C

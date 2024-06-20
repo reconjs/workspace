@@ -9,7 +9,7 @@ import {
   createNode,
   usingChild,
   usingConstant, 
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { loadPromise, memoize, susync } from "@reconjs/utils"
 

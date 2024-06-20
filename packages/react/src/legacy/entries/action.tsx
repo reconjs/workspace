@@ -9,7 +9,7 @@ import {
   Atom, 
   getDefinitionRef,
   setServerPreloader,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 
 import { Depository } from "../lib/using-query"
 import { setServerImport } from "../lib/server-import"

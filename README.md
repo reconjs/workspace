@@ -28,7 +28,7 @@ Currently, this library isn't being published because it doesn't work yet.
 
 ## Packages
 
-`@reconjs/recon` is a package for library authors to build new Recon APIs,
+`@reconjs/internals` is a package for library authors to build new Recon APIs,
 including the ones in this repo.
 
 - `@reconjs/core` for framework-agnostic Recon APIs.

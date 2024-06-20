@@ -329,9 +329,9 @@ importers:
 
   packages/core:
     dependencies:
-      '@reconjs/recon':
+      '@reconjs/internals':
         specifier: workspace:*
-        version: link:../recon
+        version: link:../internals
       '@reconjs/utils':
         specifier: workspace:*
         version: link:../utils
@@ -345,17 +345,35 @@ importers:
         specifier: ^18.2.0
         version: 18.2.0(react@18.2.0)
 
+  packages/hoist:
+    dependencies:
+      '@reconjs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: '*'
+        version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
+
+  packages/internals:
+    dependencies:
+      '@reconjs/utils':
+        specifier: workspace:*
+        version: link:../utils
+
   packages/next:
     dependencies:
       '@reconjs/core':
         specifier: workspace:*
         version: link:../core
+      '@reconjs/internals':
+        specifier: workspace:*
+        version: link:../internals
       '@reconjs/react':
         specifier: workspace:*
         version: link:../react
-      '@reconjs/recon':
-        specifier: workspace:*
-        version: link:../recon
       '@reconjs/utils':
         specifier: workspace:*
         version: link:../utils
@@ -377,9 +395,9 @@ importers:
       '@reconjs/core':
         specifier: workspace:*
         version: link:../core
-      '@reconjs/recon':
+      '@reconjs/internals':
         specifier: workspace:*
-        version: link:../recon
+        version: link:../internals
       '@reconjs/utils':
         specifier: workspace:*
         version: link:../utils
@@ -395,12 +413,6 @@ importers:
       react-dom:
         specifier: '*'
         version: 18.3.1(react@18.3.1)
-
-  packages/recon:
-    dependencies:
-      '@reconjs/utils':
-        specifier: workspace:*
-        version: link:../utils
 
   packages/utils:
     dependencies:

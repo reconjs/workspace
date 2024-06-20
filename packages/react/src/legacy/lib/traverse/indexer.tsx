@@ -1,6 +1,6 @@
 import { Func, memoize } from "@reconjs/utils"
 import { QueryVariable } from "./variables"
-import { defineHook } from "@reconjs/recon"
+import { defineHook } from "@reconjs/internals"
 
 function doo <T> (func: () => T) {
   return func ()

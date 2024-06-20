@@ -1,4 +1,4 @@
-import { Recon, ReconComponent } from "@reconjs/recon"
+import { Recon, ReconComponent } from "@reconjs/internals"
 import { guidBy, memoize } from "@reconjs/utils"
 import { ErrorBoundary, useMemoShallow } from "@reconjs/utils-react"
 import { PropsWithChildren, Suspense, createContext, useId } from "react"
