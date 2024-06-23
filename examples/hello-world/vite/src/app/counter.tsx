@@ -1,74 +1,51 @@
-import recon, { get$ } from "@reconjs/core"
-import { Hook$, View$, use$ } from "@reconjs/react"
-import { PropsOf } from "@reconjs/utils-react"
-import { Suspense, useState } from "react"
+import { useState } from "react"
+import { use$ } from "recon"
 
-const $ = recon ("@/app/counter")
+function getCounterClass (color: string) {
+  const flex = "flex flex-row items-center justify-center"
+  const border = `border border-${color}-500 rounded-full`
+  const divide = `divide-x divide-${color}-500`
+  return `h-10 w-40 ${flex} ${border} ${divide}`
+}
 
-const viaCounting$ = $(() => {
-  return Hook$ (() => {
-    const [ count, setCount ] = useState (0)
-    return { count, setCount }
-  })
-})
+function* countState$ () {
+  const [ count, setCount ] = useState (0)
+  return { count, setCount }
+  // return { count: 0, setCount: (num: number) => {} }
+}
 
-const CLASS = "w-8 flex flex-row items-center justify-center"
+function* CountChanger$ (amount: number) {
+  const { count, setCount } = yield* use$ (countState$)
 
-const useCountDisplay$ = $(() => {
-  const $Counting = viaCounting$()
-  const $count = get$ ($Counting)
+  function onClick () {
+    setCount (count + amount)
+  }
 
-  return View$ (() => {
-    const { count } = $count()
-    return (
-      <div className={CLASS}>
-        {count}
-      </div>
-    )
-  })
-})
+  const content = amount > 0 ? "+" : "-"
 
-const useIncrementButton$ = $(() => {
-  const $Counting = viaCounting$()
-  const useCounting = use$ ($Counting)
+  return () => (
+    <button className="flex-1" onClick={onClick}>
+      {content}
+    </button>
+  )
+}
 
-  return View$ (() => {
-    const { count, setCount } = useCounting()
+export function* Counter$ () {
+  const Decrementor = use$ (CountChanger$, -1)
+  const Incrementor = use$ (CountChanger$, 1)
+  const { count } = yield* use$ (countState$)
 
-    const btn: PropsOf <"button"> = {}
-    btn.type = "button"
-    btn.className = CLASS
+  const innerClass = "flex-1 w-1/2 flex items-center justify-center"
 
-    btn.onClick = () => {
-      setCount (count + 1)
-    }
+  type Props = {
+    color?: string
+  }
 
-    return (
-      <button {...btn}>+</button>
-    )
-  })
-})
-
-const useCounter$ = $(() => {
-  const CountDisplay = useCountDisplay$()
-  const IncrementButton = useIncrementButton$()
-
-  return View$ (() => {
-    return (
-      <div className="w-fit flex flex-row border rounded-full divide-x">
-        <button type="button" className={CLASS}>-</button>
-        <CountDisplay />
-        <IncrementButton />
-      </div>
-    )
-  })
-})
-
-export function Counter () {
-  const View = useCounter$()
-  return (
-    <Suspense fallback="Loading Counter...">
-      <View />
-    </Suspense>
+  return (props: Props) => (
+    <div className={getCounterClass (props.color ?? "blue")}>
+      <Decrementor />
+      <div className={innerClass}>{count}</div>
+      <Incrementor />
+    </div>
   )
 }

@@ -10,11 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@reconjs/core": "workspace:*",
-    "@reconjs/react": "workspace:*",
-    "@reconjs/utils-react": "workspace:*",
     "react": "beta",
-    "react-dom": "beta"
+    "react-dom": "beta",
+    "recon": "workspace:*"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

@@ -157,21 +157,15 @@ importers:
 
   examples/hello-world/vite:
     dependencies:
-      '@reconjs/core':
-        specifier: workspace:*
-        version: link:../../../packages/core
-      '@reconjs/react':
-        specifier: workspace:*
-        version: link:../../../packages/react
-      '@reconjs/utils-react':
-        specifier: workspace:*
-        version: link:../../../packages/utils-react
       react:
         specifier: beta
         version: 19.0.0-beta-9d76c954cf-20240510
       react-dom:
         specifier: beta
         version: 19.0.0-beta-9d76c954cf-20240510(react@19.0.0-beta-9d76c954cf-20240510)
+      recon:
+        specifier: workspace:*
+        version: link:../../../packages/recon
     devDependencies:
       '@vitejs/plugin-react':
         specifier: ^4.2.1
@@ -345,18 +339,6 @@ importers:
         specifier: ^18.2.0
         version: 18.2.0(react@18.2.0)
 
-  packages/hoist:
-    dependencies:
-      '@reconjs/utils':
-        specifier: workspace:*
-        version: link:../utils
-      react:
-        specifier: '*'
-        version: 18.3.1
-      react-dom:
-        specifier: '*'
-        version: 18.3.1(react@18.3.1)
-
   packages/internals:
     dependencies:
       '@reconjs/utils':
@@ -407,6 +389,21 @@ importers:
       '@reconjs/utils-server':
         specifier: workspace:*
         version: link:../utils-server
+      react:
+        specifier: '*'
+        version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
+
+  packages/recon:
+    dependencies:
+      '@reconjs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@reconjs/utils-react':
+        specifier: workspace:*
+        version: link:../utils-react
       react:
         specifier: '*'
         version: 18.3.1

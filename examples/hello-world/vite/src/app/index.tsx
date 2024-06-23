@@ -1,20 +1,18 @@
-import { Suspense } from "react"
-
-import { HomePage } from "./page"
-import { ReconRoot } from "@reconjs/react"
-import { Counter } from "./counter"
+import { use$ } from "recon"
+import { Counter$ } from "./counter"
 
 async function handler () {
   return {} as any
 }
 
 export function App () {
+  const Counter = use$ (Counter$)
+
   return (
-    <ReconRoot handler={handler}>
-      <Suspense>
-        <Counter />
-        <HomePage />
-      </Suspense>
-    </ReconRoot>
+    <main className="flex flex-col items-center justify-center gap-4">
+      <h1>Counters that update together</h1>
+      <Counter />
+      <Counter color="red" />
+    </main>
   )
 }
