@@ -12,6 +12,13 @@ function doo <T> (func: () => T) {
 
 const storage = memoize ((...args: any[]): any => ({}))
 
+const rerenderOf = memoize ((...args: any[]) => {
+  return createEvent()
+})
+
+// bysymbol = proc + params + called ctx
+// resymbol = proc + hydrated params + hoisted ctx
+
 const ReconContext = createContext <string> (null as any)
 
 function RERENDER () {
@@ -27,29 +34,28 @@ function useAutoRerender (...deps: any[]) {
   const rerender = useRerender()
 
   useEffect (() => {
-    const event = createEvent()
-    storage ("rerender", ...deps).push = event.push
-
-    const unsub = event.subscribe (rerender)
+    const unsub = rerenderOf (...deps).subscribe (() => {
+      console.log ("auto rerender!")
+      rerender()
+    })
     return () => unsub()
   }, deps)
 }
 
-function dispatcherOf (ctx: string, proc: Func, ...params: any[]) {
+function execute (ctx: string, proc: Func, ...params: any[]) {
   let index = 0
   const dispatcher = Dispatcher.create()
+  const rerender = rerenderOf (ctx, proc, ...params)
 
   dispatcher.useState = (init: any): any => {
-    index += 1
-
-    const rerender = storage ("rerender", ctx, proc, ...params)
-    const refs = storage ("use_state", index++, ctx, proc, ...params)
+    const refs = storage ("use_state", ++index, ctx, proc, ...params)
 
     refs.state ||= typeof init === "function"
       ? init()
       : init
 
     refs.setState ||= function setState (nextState: any) {
+      console.log ("setState", nextState)
       const { state, setStateAux } = refs
       // if (setStateAux) return setStateAux (nextState)
 
@@ -57,27 +63,29 @@ function dispatcherOf (ctx: string, proc: Func, ...params: any[]) {
         nextState = nextState (state)
       }
       refs.state = nextState
-      rerender.push?.()
-      return rerender()
+      rerender.push()
     }
 
     const { state, setState } = refs
     return [ state, setState ]
   }
 
-  return dispatcher
+  return dispatcher (() => {
+    const generator = proc (...params)
+
+    for (let i = 0; i < MAX; i++) {
+      const curr = generator.next()
+      if (curr.done) return curr.value
+      console.log (curr)
+    }
+
+    throw new Error ("Too much yielding")
+  })
 }
 
 export function ReconProvider (props: PropsWithChildren <{}>) {
   const ctx = useId()
-  const rerender = useRerender()
-
-  useEffect (() => {
-    const event = createEvent()
-    storage ("rerender", ctx).push = event.push
-    const unsub = event.subscribe (rerender)
-    return () => unsub()
-  }, [])
+  useAutoRerender (ctx)
 
   return (
     <ReconContext value={ctx}>
@@ -86,25 +94,32 @@ export function ReconProvider (props: PropsWithChildren <{}>) {
   )
 }
 
-// procsym = proc + params
-// callsym = procsym + called ctx
-// datasym = procsym + 
-
 function resolve (ctx: string, proc: Func <Recon>, ...params: any[]) {
-  const refs = storage (ctx, proc, params)
+  const rerender = rerenderOf (ctx, proc, ...params)
 
   const dispatcher = Dispatcher.create()
   const { use } = Dispatcher.current
-  dispatcher.use = use
-  dispatcher.resolve$ = function* resolve$ (ctx, proc, ...params) {
-    // TODO: 
+
+  dispatcher.use = (arg) => {
+    if (arg instanceof Promise) return use (arg)
+    throw new Error ("Can't use Context in generator.")
   }
 
+  dispatcher.resolve$ = function* resolve$ (ctx, proc, ...params) {
+    const res = execute (ctx, proc, ...params)
 
+    rerenderOf (ctx, proc, ...params).subscribe(() => {
+      console.log ("child re-rendered")
+      // TODO: unsub! move to useEffect?
+      rerender.push()
+    })
+
+    // TODO: Do this properly
+    return res
+  }
 
   dispatcher.use$ = (proc, ...params) => {
     // TODO:
-    refs.uses 
     return generatorOf (ctx, proc, ...params)
   }
 
@@ -125,9 +140,25 @@ function resolve (ctx: string, proc: Func <Recon>, ...params: any[]) {
 }
 
 const generatorOf = memoize ((ctx: string, resource: Func <Recon>, ...params: any[]) => {
+  /*
+  doo (() => async function register () {
+    const refs = storage (ctx)
+    refs.renders ??= []
+    refs.renders.push ({ resource, params })
+    rerenderOf (ctx).push ()
+  })
+  */
+
   const res: any = function Recon (props: any, ...args: any[]) {
-    if (args.length > 0) console.error ("Why are args getting passed to render?")
-    const useRender = resolve (ctx, resource, params)
+    console.log ("Rendering Recon Component")
+
+    args = args.filter (x => typeof x !== "undefined")
+    if (args.length > 0) {
+      console.log (args)
+      console.error ("Why are args getting passed to render?")
+    }
+    useAutoRerender (ctx, resource, ...params)
+    const useRender = resolve (ctx, resource, ...params)
     return useRender (props)
   }
 
@@ -184,6 +215,10 @@ export function use$ <T extends Func> (
 ): Recon <ReturnType <T>>
 
 export function use$ (resource: any, ...params: any[]): never {
+  const self = Dispatcher.current.use$
+  // @ts-ignore
+  if (self) return self (resource, ...params)
+  
   const ctx = use (ReconContext)
   // @ts-ignore
   return generatorOf (ctx, resource, ...params)

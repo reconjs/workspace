@@ -9,6 +9,7 @@ function getCounterClass (color: string) {
 }
 
 function* countState$ () {
+  console.log ("count state")
   const [ count, setCount ] = useState (0)
   return { count, setCount }
   // return { count: 0, setCount: (num: number) => {} }

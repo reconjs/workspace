@@ -32,7 +32,7 @@ const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_
 
 // what are all the keys that should be added to a dispatcher?
 const keys = doo (() => {
-  const set = new Set ([ "use" ])
+  const set = new Set ([ "resolve$", "use$" ])
   let loaded = false
 
   return () => {
@@ -52,6 +52,7 @@ function createDispatcher (message: string = "not allowed") {
     const prev = internals.H
     try {
       internals.H = dispatcher
+      console.log ({ dispatcher })
       return factory()
     }
     finally {
