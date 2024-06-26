@@ -1,6 +1,6 @@
 import { Func, Func0, Vunc } from "@reconjs/utils"
 import React, { useState } from "react"
-import { Proc } from "./types"
+import { Proc, Recon } from "./types"
 
 function doo <T> (func: () => T) {
   return func()
@@ -15,8 +15,10 @@ type ReactHooks = {
 }
 
 type ReconHooks = {
-  resolve$?: Proc,
-  use$?: (resource: Func, ...params: any[]) => any
+  context$: (...params: any[]) => Generator <any, void, any>,
+  provide$: (resource: Proc, handler: Func) => void,
+  resolve$: Proc,
+  use$: (resource: Func, ...params: any[]) => any,
 }
 
 type ReactDispatcher = ReactHooks & Partial <ReconHooks>
@@ -74,7 +76,7 @@ function createDispatcher (message: string = "not allowed") {
 
 export const Dispatcher = {
   get current () {
-    return internals.H
+    return internals.H as ReactDispatcher|null
   },
   create: createDispatcher,
 }

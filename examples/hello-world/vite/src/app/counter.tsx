@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { use$ } from "recon"
+import { context$, provide$, use$ } from "recon"
 
 function getCounterClass (color: string) {
   const flex = "flex flex-row items-center justify-center"
@@ -7,9 +7,15 @@ function getCounterClass (color: string) {
   const divide = `divide-x divide-${color}-500`
   return `h-10 w-40 ${flex} ${border} ${divide}`
 }
+/*
+export function* section$ () {
+  yield context$()
+  return null
+}*/
 
 function* countState$ () {
   console.log ("count state")
+  // yield* use$ (section$)
   const [ count, setCount ] = useState (0)
   return { count, setCount }
   // return { count: 0, setCount: (num: number) => {} }
@@ -32,6 +38,11 @@ function* CountChanger$ (amount: number) {
 }
 
 export function* Counter$ () {
+  /*
+  provide$ (section$, () => {
+    console.log ("providing counter")
+  })
+  */
   const Decrementor = use$ (CountChanger$, -1)
   const Incrementor = use$ (CountChanger$, 1)
   const { count } = yield* use$ (countState$)
