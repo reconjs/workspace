@@ -11,7 +11,8 @@ function getCounterClass (color: string) {
 export function* section$ () {
   yield context$()
   return null
-}*/
+}
+*/
 
 function* countState$ () {
   console.log ("count state")

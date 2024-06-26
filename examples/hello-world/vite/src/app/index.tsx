@@ -1,5 +1,6 @@
 import { use$ } from "recon"
 import { Counter$ } from "./counter"
+import { Fragment } from "react"
 
 function TogetherCounters () {
   const Counter = use$ (Counter$)
@@ -27,8 +28,11 @@ function SeparatelyCounters () {
 }
 
 export function App () {
+  const Counter = use$ (Counter$)
+
   return (
     <main className="flex flex-col items-center justify-center gap-4">
+      <Counter />
       <TogetherCounters />
       <SeparatelyCounters />
     </main>

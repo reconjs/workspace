@@ -1,51 +1,8 @@
-import { Fanc, Func, Subscribe, createEvent, guidBy, memoize } from "@reconjs/utils"
+import { Fanc, Func, createEvent, memoize } from "@reconjs/utils"
 import { PropsWithChildren, createContext, use, useEffect, useId, useReducer } from "react"
-import { Prac, PracReturns, Proc, ProcReturns, Recon } from "./types"
+import { Prac, PracReturns, Proc, ProcReturns, Recon, ReconResolver, ReconConsumer } from "./types"
 import { Dispatcher } from "./react"
-
-class ReconCtx {}
-
-abstract class ReconHook {
-  resolver!: ReconResolver
-  index!: number
-}
-
-// resolve the hooks
-class ReconResolver {
-  hooks: ReconHook[] = []
-}
-
-// something I can always create synchronously
-class ReconConsumer {
-  ctx!: ReconCtx
-  proc!: Proc
-  params!: any[]
-
-  event = createEvent()
-  private _unsub?: VoidFunction
-
-  private _pointer?: ReconPointer
-
-  get pointer(): ReconPointer|undefined {
-    return this._pointer
-  }
-
-  set pointer (ptr: ReconPointer) {
-    this._unsub?.()
-    this._unsub = ptr.event.subscribe (() => {
-      this.event.push()
-    })
-    this._pointer = ptr
-  }
-}
-
-// something I can turn in to a value
-class ReconPointer {
-  ctx!: ReconCtx
-  proc!: Proc
-  params!: any[]
-  event = createEvent()
-}
+import { useInitial } from "@reconjs/utils-react"
 
 const MAX = 100
 
@@ -63,7 +20,7 @@ const rerenderOf = memoize ((...args: any[]) => {
 // bysymbol = proc + params + called ctx
 // resymbol = proc + hydrated params + hoisted ctx
 
-const ReconContext = createContext (symbolOf())
+
 
 function RERENDER () {
   return Symbol()
@@ -86,13 +43,125 @@ function useAutoRerender (...deps: any[]) {
   }, deps)
 }
 
-function execute (ctx: string, proc: Func, ...params: any[]) {
-  let index = 0
+
+// CONTEXT
+
+export class ReconScope {
+  resolvers: ReconResolver[] = []
+  parent?: ReconScope
+
+  find = (proc: Proc, ...params: any[]): ReconResolver|undefined => {
+    const found = this.resolvers.find ((resolver) => {
+      console.log ({ resolver, proc, params })
+      if (resolver.proc !== proc) return
+      if (resolver.params.length !== params.length) return
+      for (let i = 0; i < params.length; i++) {
+        if (resolver.params[i] !== params[i]) return
+      }
+      return true
+    })
+
+    console.log (found)
+    
+    if (found) return found
+    if (this.parent) return this.parent.find (proc, ...params)
+  }
+
+  hoist = (proc: Proc, ...params: any[]): ReconConsumer => {
+    const scope = this
+    const found = scope.find (proc, ...params)
+    if (found) return found
+
+    const consumer = new ReconConsumer (scope, proc, ...params)
+
+    const initer = doo (function* initialize () {
+      const resolver = new ReconResolver (scope, proc, ...params)
+      resolver.current = execute (resolver)
+      // TODO: Hoist to the correct level
+      scope.resolvers.push (resolver)
+    })
+
+    // @ts-ignore
+    consumer[Symbol.iterator] = function* initialize () {
+      if (consumer.resolver) return
+
+      const found1 = scope.find (proc, ...params)
+      if (found1) {
+        consumer.resolver = found1
+        return
+      }
+
+      yield* initer
+
+      const found2 = scope.find (proc, ...params)
+      if (found2) {
+        consumer.resolver = found2
+        return
+      }
+
+      console.log (self)
+      throw new Error ("Unexpected issue with hoisting")
+    }
+
+    return consumer
+  }
+}
+
+const NON_SCOPE = doo (() => {
+  const res = new ReconScope()
+  res.find = () => {
+    throw new Error ("ReconProvider not found!")
+  }
+  // @ts-ignore
+  res.hoist = () => {
+    throw new Error ("ReconProvider not found!")
+  }
+  return res
+})
+
+const ReconContext = createContext (NON_SCOPE)
+
+export function ReconProvider (props: PropsWithChildren <{}>) {
+  const id = useId() // de-dupe across Suspense
+  const scope = useInitial (() => {
+    return new ReconScope()
+  })
+
+  return (
+    <ReconContext value={scope}>
+      {props.children}
+    </ReconContext>
+  )
+}
+
+
+
+// EXECUTION
+
+function execute (resolver: ReconResolver) {
+  let index = -1
   const dispatcher = Dispatcher.create()
-  const rerender = rerenderOf (ctx, proc, ...params)
+
+  const use = Dispatcher.current?.use ?? NO_USE
+
+  let forwardCtx = resolver.scope
+
+  dispatcher.use = (arg) => {
+    if (arg instanceof Promise) return use (arg)
+    throw new Error ("Can't use Context in generator")
+  }
+
+  dispatcher.use$ = (proc, ...params) => {
+    // TODO:
+    const gen = generatorOf (forwardCtx, proc, ...params)
+    gen.consumer.subscribe (() => {
+      resolver.push()
+    })
+    return gen
+  }
 
   dispatcher.useState = (init: any): any => {
-    const hookRefs = storage ("use_state", ++index, ctx, proc, ...params)
+    const hookRefs = storage ("use_state", ++index, resolver)
 
     hookRefs.state ||= typeof init === "function"
       ? init()
@@ -107,7 +176,7 @@ function execute (ctx: string, proc: Func, ...params: any[]) {
         nextState = nextState (state)
       }
       hookRefs.state = nextState
-      rerender.push()
+      resolver.push()
     }
 
     const { state, setState } = hookRefs
@@ -115,6 +184,7 @@ function execute (ctx: string, proc: Func, ...params: any[]) {
   }
 
   return dispatcher (() => {
+    const { proc, params } = resolver
     const generator = proc (...params)
 
     for (let i = 0; i < MAX; i++) {
@@ -123,7 +193,7 @@ function execute (ctx: string, proc: Func, ...params: any[]) {
       if (value) {
         // early exiting?
         console.log ("early return", value)
-        return value
+        // return value
       }
     }
 
@@ -131,24 +201,41 @@ function execute (ctx: string, proc: Func, ...params: any[]) {
   })
 }
 
-export function ReconProvider (props: PropsWithChildren <{}>) {
-  const id = useId()
-  const ctx = symbolOf (id)
-  useAutoRerender (ctx)
+function consume (consumer: ReconConsumer) {
+  const dispatcher = Dispatcher.create()
 
-  return (
-    <ReconContext value={ctx}>
-      {props.children}
-    </ReconContext>
-  )
+  const use = Dispatcher.current?.use ?? NO_USE
+
+  let forwardCtx = consumer.scope
+
+  dispatcher.use = (arg) => {
+    if (arg instanceof Promise) return use (arg)
+    throw new Error ("Can't use Context in generator")
+  }
+
+  dispatcher.use$ = (proc, ...params) => {
+    // TODO:
+    return generatorOf (forwardCtx, proc, ...params)
+  }
+
+  return dispatcher (() => {
+    for (const effect of consumer) {
+      console.log (effect)
+    }
+
+    const { resolver } = consumer
+    if (!resolver) throw new Error ("Consumer didn't product a resolver")
+    return resolver
+  })
 }
 
 const NO_USE: typeof use = () => {
   throw new Error ("use does not exist")
 }
 
-function resolve (ctx: symbol, proc: Func <Recon>, ...params: any[]) {
-  const rerender = rerenderOf (ctx, proc, ...params)
+/*
+function resolve (consumer: ReconConsumer) {
+  const rerender = rerenderOf (consumer)
 
   const dispatcher = Dispatcher.create()
   const use = Dispatcher.current?.use ?? NO_USE
@@ -158,12 +245,13 @@ function resolve (ctx: symbol, proc: Func <Recon>, ...params: any[]) {
     throw new Error ("Can't use Context in generator")
   }
 
-  const refs = storage (ctx, proc, ...params)
+  const refs = storage (consumer)
   refs.provides ??= []
 
-  let forwardCtx = ctx
+  let forwardCtx = consumer.scope
   let i = -1
 
+  /*
   dispatcher.provide$ = function provide$ (resource, handler) {
     forwardCtx = refs.provides [++i]
 
@@ -185,6 +273,7 @@ function resolve (ctx: symbol, proc: Func <Recon>, ...params: any[]) {
     refs.provides [i] = forwardCtx
   }
 
+  /*
   dispatcher.resolve$ = function* resolve$ (ctx, proc, ...params) {
     const res = execute (ctx, proc, ...params)
 
@@ -204,6 +293,7 @@ function resolve (ctx: symbol, proc: Func <Recon>, ...params: any[]) {
   }
 
   return dispatcher (() => {
+    const { proc, params } = consumer
     const generator = proc (...params)
 
     // @ts-ignore
@@ -218,41 +308,59 @@ function resolve (ctx: symbol, proc: Func <Recon>, ...params: any[]) {
     throw new Error ("Too much yielding")
   })
 }
+*/
 
-const generatorOf = memoize ((ctx: symbol, resource: Func <Recon>, ...params: any[]) => {
-  console.log ("generatorOf", guidBy (ctx))
+const generatorOf = memoize ((scope: ReconScope, proc: Func <Recon>, ...params: any[]) => {
+  console.log (scope)
 
-  /*
-  doo (() => async function register () {
-    const refs = storage (ctx)
-    refs.renders ??= []
-    refs.renders.push ({ resource, params })
-    rerenderOf (ctx).push ()
-  })
-  */
+  const consumer = scope.hoist (proc, ...params)
 
-  const res: any = function Recon (props: any, ...args: any[]) {
-    console.log ("Rendering Recon Component")
+  const res: any = function Recon (...args: any[]) {
+    console.log ("Rendering Recon Component", consumer)
 
     args = args.filter (x => typeof x !== "undefined")
-    if (args.length > 0) {
+    if (args.length > 1) {
       console.log (args)
       console.error ("Why are args getting passed to render?")
     }
-    useAutoRerender (ctx, resource, ...params)
-    const useRender = resolve (ctx, resource, ...params)
-    return useRender (props)
+
+    const resolver = consume (consumer as any)
+
+    const rerender = useRerender()
+    useEffect (() => {
+      return resolver.subscribe (rerender)
+    }, [ resolver ])
+    
+    console.log ("resolver =", resolver)
+    // useAutoRerender (consumer)
+    const useRender = execute (resolver)
+    return useRender (...args)
   }
 
   // @ts-ignore
-  if (resource.displayName) res.displayName = resource.displayName
-  else if (resource.name) res.displayName = resource.name
+  res.consumer = consumer
 
-  res[Symbol.iterator] = function* resolve () {
-    const resolve$ = Dispatcher.current?.resolve$
-    if (!resolve$) throw new Error ("resolve$ does not exist")
-    const result = yield* resolve$ (ctx, resource, ...params)
+  // @ts-ignore
+  if (proc.displayName) res.displayName = proc.displayName
+  else if (proc.name) res.displayName = proc.name
+
+  // res.consumer = consumer
+
+  res[Symbol.iterator] = function* yielding () {
+    /*
+    const resolver = Dispatcher.current?.resolve$
+    if (!resolver) throw new Error ("resolve$ does not exist")
+    const result = yield* resolver (ctx, resource, ...params)
     return result
+    */
+    console.log ("[yielding] start", consumer)
+    yield* consumer
+    console.log ("[yielding] end", consumer.resolver)
+    
+    if (!consumer.resolver) {
+      throw new Error ("No resolver :(")
+    }
+    return execute (consumer.resolver)
   }
 
   return res
@@ -303,9 +411,20 @@ export function use$ (resource: any, ...params: any[]): never {
   // @ts-ignore
   if (handler) return handler (resource, ...params)
   
+  const ctx = use (ReconContext)
+  /*
+  const id = useId()
   const parent = use (ReconContext)
+  storage (id).scope ??= doo (() => {
+    const scope = new ReconScope()
+    scope.hoist = function* hoist (...args) {
+      const resolver = yield* parent.hoist (...args)
+    }
+    return scope
+  })
   const ctx = symbolOf (useId(), parent)
   storage (ctx).parent ??= parent
+  */
   // @ts-ignore
   return generatorOf (ctx, resource, ...params)
 }
