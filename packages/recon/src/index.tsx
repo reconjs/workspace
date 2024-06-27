@@ -11,11 +11,6 @@ function doo <T> (func: () => T) {
 }
 
 const storage = memoize ((...args: any[]): any => ({}))
-const symbolOf = memoize ((...args: any[]) => Symbol())
-
-const rerenderOf = memoize ((...args: any[]) => {
-  return createEvent()
-})
 
 // bysymbol = proc + params + called ctx
 // resymbol = proc + hydrated params + hoisted ctx
@@ -31,17 +26,6 @@ function useRerender () {
   return rerender as VoidFunction
 }
 
-function useAutoRerender (...deps: any[]) {
-  const rerender = useRerender()
-
-  useEffect (() => {
-    const unsub = rerenderOf (...deps).subscribe (() => {
-      console.log ("auto rerender!")
-      rerender()
-    })
-    return () => unsub()
-  }, deps)
-}
 
 
 // CONTEXT
@@ -49,6 +33,10 @@ function useAutoRerender (...deps: any[]) {
 export class ReconScope {
   resolvers: ReconResolver[] = []
   parent?: ReconScope
+
+  constructor (parent?: ReconScope) {
+    this.parent = parent
+  }
 
   find = (proc: Proc, ...params: any[]): ReconResolver|undefined => {
     const found = this.resolvers.find ((resolver) => {
@@ -77,6 +65,7 @@ export class ReconScope {
     const initer = doo (function* initialize () {
       const resolver = new ReconResolver (scope, proc, ...params)
       resolver.current = execute (resolver)
+
       // TODO: Hoist to the correct level
       scope.resolvers.push (resolver)
     })
@@ -411,7 +400,8 @@ export function use$ (resource: any, ...params: any[]): never {
   // @ts-ignore
   if (handler) return handler (resource, ...params)
   
-  const ctx = use (ReconContext)
+  const parent = use (ReconContext)
+  const scope = useInitial (() => new ReconScope (parent))
   /*
   const id = useId()
   const parent = use (ReconContext)
@@ -426,7 +416,7 @@ export function use$ (resource: any, ...params: any[]): never {
   storage (ctx).parent ??= parent
   */
   // @ts-ignore
-  return generatorOf (ctx, resource, ...params)
+  return generatorOf (scope, resource, ...params)
 }
 
 export function provide$ (resource: any, override: Func) {
