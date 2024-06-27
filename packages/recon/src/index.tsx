@@ -1,8 +1,15 @@
 import { Fanc, Func, createEvent, memoize } from "@reconjs/utils"
-import { PropsWithChildren, createContext, use, useEffect, useId, useReducer } from "react"
-import { Prac, PracReturns, Proc, ProcReturns, Recon, ReconResolver, ReconConsumer } from "./types"
-import { Dispatcher } from "./react"
 import { useInitial } from "@reconjs/utils-react"
+import {
+  PropsWithChildren,
+  createContext,
+  use,
+  useEffect,
+  useId,
+  useReducer,
+} from "react"
+
+import { Dispatcher } from "./react"
 
 const MAX = 100
 
@@ -12,11 +19,6 @@ function doo <T> (func: () => T) {
 
 const storage = memoize ((...args: any[]): any => ({}))
 
-// bysymbol = proc + params + called ctx
-// resymbol = proc + hydrated params + hoisted ctx
-
-
-
 function RERENDER () {
   return Symbol()
 }
@@ -24,6 +26,88 @@ function RERENDER () {
 function useRerender () {
   const [ , rerender ] = useReducer (RERENDER, null)
   return rerender as VoidFunction
+}
+
+type AnyGenerator = Generator <any, any, any>
+
+type Proc <T = any, A extends any[] = any[]> = (...args: A) => Generator <any, T>
+type Prac <T = any, A extends any[] = any[]> = (...args: A) => AsyncGenerator <any, T>
+
+type ProcReturns <P extends Proc> = P extends Proc <infer T> ? T : never
+type PracReturns <P extends Prac> = P extends Prac <infer T> ? T : never
+
+abstract class ReconEffect {}
+
+
+
+// RECON TYPES
+
+export type Recon <T = any> = T extends Func ? T : Generator <ReconEffect, T>
+
+export class ReconConsumer {
+  scope: ReconScope
+  proc: Proc
+  params: any[]
+
+  constructor (scope: ReconScope, proc: Proc, ...params: any[]) {
+    this.scope = scope
+    this.proc = proc
+    this.params = params
+  }
+
+  protected _event = createEvent()
+
+  get subscribe () {
+    return this._event.subscribe
+  }
+
+  private _resolver?: ReconResolver
+
+  get resolver (): ReconResolver {
+    // if (!this._resolver) throw new Error ("resolver not initialized")
+    return this._resolver as any
+  }
+
+  private _unsub?: VoidFunction
+
+  set resolver (resolver: ReconResolver) {
+    this._unsub?.()
+    this._unsub = resolver.subscribe (() => {
+      this._event.push()
+    })
+    this._resolver = resolver
+  }
+
+  [Symbol.iterator] = function* () {}
+}
+
+export class ReconResolver extends ReconConsumer {
+  constructor (scope: ReconScope, proc: Proc, ...params: any[]) {
+    super (scope, proc, ...params)
+  }
+
+  private _current: any
+
+  get current (): any {
+    return this._current
+  }
+
+  set current (next: any) {
+    this._current = next
+    this._event.push()
+  }
+
+  get resolver () {
+    return this as ReconResolver
+  }
+
+  set resolver (next: ReconResolver) {
+    throw new Error ("Cannot override a resolver")
+  }
+
+  get push () {
+    return this._event.push
+  }
 }
 
 
@@ -222,83 +306,6 @@ const NO_USE: typeof use = () => {
   throw new Error ("use does not exist")
 }
 
-/*
-function resolve (consumer: ReconConsumer) {
-  const rerender = rerenderOf (consumer)
-
-  const dispatcher = Dispatcher.create()
-  const use = Dispatcher.current?.use ?? NO_USE
-
-  dispatcher.use = (arg) => {
-    if (arg instanceof Promise) return use (arg)
-    throw new Error ("Can't use Context in generator")
-  }
-
-  const refs = storage (consumer)
-  refs.provides ??= []
-
-  let forwardCtx = consumer.scope
-  let i = -1
-
-  /*
-  dispatcher.provide$ = function provide$ (resource, handler) {
-    forwardCtx = refs.provides [++i]
-
-    forwardCtx ??= doo (() => {
-      console.log ("Creating forward CTX")
-      const sym = Symbol()
-      storage (forwardCtx, resource).symbol = sym
-      const refs = storage (sym)
-      refs.parent = forwardCtx
-      refs.resource = resource
-      refs.handler = handler
-      return sym
-    })
-
-    if (forwardCtx === ctx) {
-      throw new Error ("Forward CTX matches CTX")
-    }
-
-    refs.provides [i] = forwardCtx
-  }
-
-  /*
-  dispatcher.resolve$ = function* resolve$ (ctx, proc, ...params) {
-    const res = execute (ctx, proc, ...params)
-
-    rerenderOf (ctx, proc, ...params).subscribe(() => {
-      console.log ("child re-rendered")
-      // TODO: unsub! move to useEffect?
-      rerender.push()
-    })
-
-    // TODO: Do this properly
-    return res
-  }
-
-  dispatcher.use$ = (proc, ...params) => {
-    // TODO:
-    return generatorOf (forwardCtx, proc, ...params)
-  }
-
-  return dispatcher (() => {
-    const { proc, params } = consumer
-    const generator = proc (...params)
-
-    // @ts-ignore
-    if (generator[Symbol.asyncIterator]) throw new Error ("Async Generator")
-    if (!generator[Symbol.iterator]) throw new Error ("Expected a Generator")
-
-    for (let i = 0; i < MAX; i++) {
-      const curr = generator.next()
-      if (curr.done) return curr.value
-      console.log (curr)
-    }
-    throw new Error ("Too much yielding")
-  })
-}
-*/
-
 const generatorOf = memoize ((scope: ReconScope, proc: Func <Recon>, ...params: any[]) => {
   console.log (scope)
 
@@ -318,7 +325,7 @@ const generatorOf = memoize ((scope: ReconScope, proc: Func <Recon>, ...params: 
     const rerender = useRerender()
     useEffect (() => {
       return resolver.subscribe (rerender)
-    }, [ resolver ])
+    }, [ resolver, rerender ])
     
     console.log ("resolver =", resolver)
     // useAutoRerender (consumer)
@@ -355,25 +362,21 @@ const generatorOf = memoize ((scope: ReconScope, proc: Func <Recon>, ...params: 
   return res
 })
 
-export function use$ <P extends Prac <Func>> (
-  resource: P, 
+// Async Generators for lists only?
+export function use$ <P extends Prac> (
+  resource: P,
   ...params: Parameters <P>
 ): never
 
-export function use$ <T extends Fanc <Func>> (
-  resource: T, 
-  ...params: Parameters <T>
-): never
+export function use$ <P extends Proc <Recon>> (
+  resource: P, 
+  ...params: Parameters <P>
+): ProcReturns <P>
 
 export function use$ <P extends Proc> (
   resource: P, 
   ...params: Parameters <P>
 ): Recon <ProcReturns <P>>
-
-export function use$ <P extends Prac> (
-  resource: P, 
-  ...params: Parameters <P>
-): Recon <PracReturns <P>>
 
 export function use$ <T extends Fanc <Func>> (
   resource: T, 
@@ -401,20 +404,8 @@ export function use$ (resource: any, ...params: any[]): never {
   if (handler) return handler (resource, ...params)
   
   const parent = use (ReconContext)
+  // eslint-disable-next-line
   const scope = useInitial (() => new ReconScope (parent))
-  /*
-  const id = useId()
-  const parent = use (ReconContext)
-  storage (id).scope ??= doo (() => {
-    const scope = new ReconScope()
-    scope.hoist = function* hoist (...args) {
-      const resolver = yield* parent.hoist (...args)
-    }
-    return scope
-  })
-  const ctx = symbolOf (useId(), parent)
-  storage (ctx).parent ??= parent
-  */
   // @ts-ignore
   return generatorOf (scope, resource, ...params)
 }
