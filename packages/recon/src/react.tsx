@@ -1,6 +1,6 @@
-import { Func, Func0, Vunc } from "@reconjs/utils"
-import React, { useState } from "react"
-import { Proc, Recon } from "./types"
+import { Func, Vunc } from "@reconjs/utils"
+import React from "react"
+import { Proc } from "./index"
 
 function doo <T> (func: () => T) {
   return func()

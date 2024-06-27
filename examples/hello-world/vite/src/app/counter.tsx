@@ -17,8 +17,12 @@ export function* section$ () {
 function* countState$ () {
   console.log ("count state")
   // yield* use$ (section$)
-  const [ count, setCount ] = useState (0)
-  return { count, setCount }
+  // return { count: 0, setCount: (num: number) => {}  }
+  return use$ (() => {
+    const [ count, setCount ] = useState (0)
+    return { count, setCount }
+  })
+  
   // return { count: 0, setCount: (num: number) => {} }
 }
 
@@ -39,6 +43,7 @@ function* CountChanger$ (amount: number) {
 }
 
 export function* Counter$ () {
+  console.log ("Counter$")
   /*
   provide$ (section$, () => {
     console.log ("providing counter")

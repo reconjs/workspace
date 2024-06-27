@@ -28,13 +28,16 @@ function SeparatelyCounters () {
 }
 
 export function App () {
+  console.log ("App calling Counter$")
   const Counter = use$ (Counter$)
 
   return (
     <main className="flex flex-col items-center justify-center gap-4">
       <Counter />
+      {/* 
       <TogetherCounters />
       <SeparatelyCounters />
+      */}
     </main>
   )
 }
