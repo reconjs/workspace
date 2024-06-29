@@ -9,11 +9,32 @@ import {
 
 import { Dispatcher } from "./react"
 
-const MAX = 100
+const NEVER = {} as any
+const MAX = 20
 
 function doo <T> (func: () => T) {
   return func()
 }
+
+function* NON_ITERATOR () {}
+
+const GeneratorFunction = NON_ITERATOR.constructor
+
+
+
+// TYPES
+
+type AnyGenerator = Generator <any, any, any>
+
+type Proc0 <T = any> = () => Generator <any, T>
+export type Proc <T = any, A extends any[] = any[]> = (...args: A) => Generator <any, T>
+type Prac <T = any, A extends any[] = any[]> = (...args: A) => AsyncGenerator <any, T>
+
+type Returns <F extends Func> = F extends Proc <infer T> ? T : Awaited <ReturnType <F>>
+
+
+
+// RERENDER
 
 function RERENDER () {
   return Symbol()
@@ -24,21 +45,52 @@ function useRerender () {
   return rerender as VoidFunction
 }
 
-type AnyGenerator = Generator <any, any, any>
-
-type Proc0 <T = any> = () => Generator <any, T>
-export type Proc <T = any, A extends any[] = any[]> = (...args: A) => Generator <any, T>
-type Prac <T = any, A extends any[] = any[]> = (...args: A) => AsyncGenerator <any, T>
-
-type Returns <F extends Func> = F extends Proc <infer T> ? T : Awaited <ReturnType <F>>
-
-abstract class ReconEffect {}
-
 
 
 // RECON TYPES
 
+abstract class ReconEffect {}
+
 export type Reconic <T = any> = T extends Func ? T : Generator <ReconEffect, T>
+
+const NON_RECON = doo (() => {
+  function ReconNever () {
+    throw new Error ("Recon not found!")
+  }
+  
+  const res: any = ReconNever
+  res[Symbol.iterator] = () => {
+    throw new Error ("Recon not found!")
+  }
+  
+  return res
+})
+
+
+// SCOPE
+let runCount = 0
+
+type DispatcherRef = {
+  scope: ReconScope,
+  resolver?: Func,
+}
+
+function createBasicDispatcher (ref: DispatcherRef) {
+  const dispatcher = Dispatcher.create ()
+  
+  dispatcher.use$ = (proc, ...params) => {
+    if (proc instanceof GeneratorFunction) {
+      return ref.scope.use (proc, ...params)
+    }
+    if (typeof proc === "function") {
+      ref.resolver = proc
+      return NON_RECON
+    }
+    throw new Error ("use$ must be called with a generator or function!")
+  }
+  
+  return dispatcher
+}
 
 export class ReconScope {
   readonly parent?: ReconScope
@@ -59,6 +111,7 @@ export class ReconScope {
   }
   
   use = (proc: Proc, ...params: any[]) => {
+    // console.log ("Scope::use", proc.displayName ?? proc.name)
     const scope = this
     
     const found = scope.get (proc, ...params)
@@ -66,49 +119,97 @@ export class ReconScope {
     
     let handler: Proc0
     
-    
-    const initer = doo (function* () {
-      const dispatcher = Dispatcher.create ()
-      dispatcher.scope = scope
+    // RUNNER = dispatcher + generator
+    function run () {
+      if (runCount++ > MAX) throw new Error ("Too much running")
       
-      dispatcher (() => {
+      const ref: DispatcherRef = { scope }
+      const dispatcher = createBasicDispatcher (ref)
+      
+      const result = dispatcher (() => {
         const iter = proc (...params)
-        
-        for (let i = 0; i < MAX; i++) {
-          const { done, value } = iter.next()
-          if (done) return
-          console.log (value)
-        }
-        
-        throw new Error ("Too much yielding")
-      })
-      
-      const ancestor = scope // TODO: Track in runtime?
-      if (ancestor !== scope) {
-        handler = ancestor.use (proc, ...params)
-      }
-      // add to the correct place...
-    })
-    
-    
-    function* resolve() {
-      yield* initer
-      if (handler) return yield* handler()
-      
-      const dispatcher = Dispatcher.create()
-      dispatcher.scope = scope
-      
-      return dispatcher (() => {
-        const iter = proc (...params)
+        // console.log ({ iter })
         
         for (let i = 0; i < MAX; i++) {
           const { done, value } = iter.next()
           if (done) return value
-          console.log (value)
+          console.log ("yielded on", value)
         }
         
         throw new Error ("Too much yielding")
       })
+      
+      const { resolver } = ref
+      return { result, resolver }
+    }
+    
+    const initer = doo (function* () {
+      run()
+      /*
+      if (ancestor !== scope) {
+        console.log ("Ancestor is the one to use!")
+        handler = ancestor.use (proc, ...params)
+      }
+      */
+      // add to the correct place...
+    })
+    
+    let resolved = NEVER
+    
+    let hooks: any[] = []
+    
+    function* resolve() {
+      yield* initer
+      console.log ("finished initer")
+      if (handler) return yield* handler()
+      if (resolved !== NEVER) return resolved
+      
+      const { result, resolver } = run()
+      console.log ("[resolve]", { result, resolver })
+      if (result !== NON_RECON) return result
+      if (!resolver) throw new Error ("No resolver!")
+      
+      const hook = doo (() => {
+        let index = -1
+        type Hook <T> = { current: T }
+        return function <T> (initial: () => T): Hook <T> {
+          index += 1
+          hooks [index] ??= { current: initial() }
+          return hooks [index]
+        }
+      })
+      
+      const dispatcher = Dispatcher.create ()
+      
+      dispatcher.useRef = (init: any) => hook (() => init)
+      
+      dispatcher.useState = (init: any) => {
+        const state = hook (() => {
+          if (typeof init !== "function") init = () => init
+          return init()
+        })
+        
+        const setState = hook (() => (next: any) => {
+          if (typeof next !== "function") next = (_: any) => next
+          state.current = next (state.current)
+          console.log ("new state", state.current)
+          // TODO: rerender
+        })
+        
+        return [ state.current, setState.current ]
+      }
+      
+      resolved = dispatcher (() => {
+        try {
+          console.group("Calling resolver:")
+          return resolver()
+        }
+        finally {
+          console.groupEnd()
+        }
+      })
+      
+      return resolved
     }
     
     
@@ -121,24 +222,9 @@ export class ReconScope {
         console.error ("Why are args getting passed to render?")
       }
       
-      const dispatcher = Dispatcher.create()
-      dispatcher.scope = scope
-      
-      return dispatcher (() => {
-        const iter = resolve()
-        
-        for (let i = 0; i < MAX; i++) {
-          const { done, value } = iter.next()
-          if (done) {
-            let render: Func = () => value
-            if (typeof value === "function") render = value
-            return render (...args)
-          }
-          console.log (value)
-        }
-        
-        throw new Error ("Too much yielding")
-      })
+      const { result } = run()
+      if (typeof result !== "function") return result
+      return result (...args)
     }
     
     
@@ -166,9 +252,7 @@ const ReconContext = createContext (NON_SCOPE)
 
 export function ReconProvider (props: PropsWithChildren <{}>) {
   // TODO: ID for when suspended
-  const scope = useInitial (() => {
-    return new ReconScope()
-  })
+  const scope = useInitial (() => new ReconScope())
 
   return (
     <ReconContext value={scope}>
@@ -201,12 +285,23 @@ export function use$ <T extends Fanc0> (loader: T): Reconic <Returns <T>>
 export function use$ <T extends Func0> (hook: T): Reconic <ReturnType <T>>
 
 export function use$ (resource: any, ...params: any[]): never {
+  const use$ = Dispatcher.current?.use$
   // @ts-ignore
-  const scope = Dispatcher.current?.scope ?? use (ReconContext)
+  if (use$) return use$ (resource, ...params)
+  
+  const scope = use (ReconContext)
   // eslint-disable-next-line
   // const scope = useInitial (() => new ReconScope (parent))
-  // @ts-ignore
-  return scope.use (resource, ...params)
+  
+  // makes sure resource doesn't change
+  resource = useInitial (() => resource) // eslint-disable-line
+  
+  if (resource instanceof GeneratorFunction) {
+    // @ts-ignore
+    return scope.use (resource, ...params)
+  }
+  // TODO: What if it's a function?
+  throw new Error ("use$ does not support [whatever resource is]")
 }
 
 export function provide$ (resource: any, override: Func) {

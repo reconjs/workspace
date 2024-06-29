@@ -7,6 +7,7 @@ function doo <T> (func: () => T) {
 }
 
 type ReactHooks = {
+  useRef: (init: any) => { current: any },
   useState: (init: any) => [ any, Vunc <[ any ]> ],
   use: {
     (ctx: React.Context <any>): any
@@ -54,7 +55,7 @@ function createDispatcher (message: string = "not allowed") {
     const prev = internals.H
     try {
       internals.H = dispatcher
-      console.log ({ dispatcher })
+      // console.log ({ dispatcher })
       return factory()
     }
     finally {
