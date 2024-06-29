@@ -34,10 +34,8 @@ export function App () {
   return (
     <main className="flex flex-col items-center justify-center gap-4">
       <Counter />
-      {/* 
       <TogetherCounters />
       <SeparatelyCounters />
-      */}
     </main>
   )
 }
