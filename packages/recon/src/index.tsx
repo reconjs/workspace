@@ -1,4 +1,4 @@
-import { Fanc, Fanc0, Func, Func0, Subscribe, createEvent, memoize } from "@reconjs/utils"
+import { Fanc, Fanc0, Func, Func0, Subscribe, Vunc, createEvent, memoize, loadPromise } from "@reconjs/utils"
 import { useInitial } from "@reconjs/utils-react"
 import {
   PropsWithChildren,
@@ -8,7 +8,7 @@ import {
   useReducer,
 } from "react"
 
-import { Dispatcher } from "./react"
+import { Dispatcher, ReconDispatcher } from "./react"
 
 const NEVER = {} as any
 const MAX = 100
@@ -61,6 +61,15 @@ class Subscription extends ReconEffect {
   }
 }
 
+class PromiseEffect extends ReconEffect {
+  promise: Promise <any>
+  
+  constructor (promise: Promise <any>) {
+    super()
+    this.promise = promise
+  }
+}
+
 
 
 // RECON
@@ -99,9 +108,10 @@ type DispatcherRef = {
   resolver?: Func,
 }
 
-function createBasicDispatcher (ref: DispatcherRef) {
-  const dispatcher = Dispatcher.create ()
-  
+function assignBasicHooks (
+  dispatcher: ReconDispatcher,
+  ref: DispatcherRef,
+) {  
   dispatcher.use$ = (proc, ...params) => {
     if (proc instanceof GeneratorFunction) {
       return ref.scope.use (proc, ...params)
@@ -131,6 +141,7 @@ function make(scope: ReconScope, proc: Proc, ...params: any[]) {
 
     function extend(effect: Subscription) {
       if (extended.has(effect)) return
+      console.log ("extending subscription", displayName)
       extended.add(effect)
 
       const unsub = effect.subscribe(push)
@@ -150,42 +161,74 @@ function make(scope: ReconScope, proc: Proc, ...params: any[]) {
       console.log("Revalidator effect!")
     })
 
-    return { extend, effect, push, subscribe }
+    return { cleanup, extend, effect, push, subscribe }
   })
 
   let handler: Proc0
 
   // RUNNER = dispatcher + generator
-  function run() {
+  function* run () {
     ensureRunIsntLooping()
 
-    const ref: DispatcherRef = { scope }
-    const dispatcher = createBasicDispatcher(ref)
+    const locals: DispatcherRef = { scope }
+    
+    const dispatcher = doo(() => {
+      const dispatcher = Dispatcher.create()
 
-    const result = dispatcher(() => {
+      dispatcher.use$ = (proc, ...params) => {
+        if (proc instanceof GeneratorFunction) {
+          return locals.scope.use(proc, ...params)
+        }
+        if (typeof proc === "function") {
+          locals.resolver = proc
+          return NON_RECON
+        }
+        throw new Error("use$ must be called with a generator or function!")
+      }
+      
+      return dispatcher
+    })
+
+    const prevDispatcher: any = Dispatcher.current
+    Dispatcher.current = dispatcher
+      
+    try {
       const iter = proc(...params)
       // console.log ({ iter })
 
       for (let i = 0; i < MAX; i++) {
         const { done, value } = iter.next()
-        if (done) return value
-
-        console.log("yielded on", value)
+        const { resolver } = locals
+        if (done) return { value, resolver }
+        console.log ("yielded", value)
+        
         if (value instanceof Subscription) {
           console.log("extending...")
-          revalidator.extend(value)
+          revalidator.extend (value)
+        }
+        else if (value instanceof PromiseEffect) {
+          let fulfilled = false
+          value.promise.finally (() => {
+            fulfilled = true
+          })
+          
+          let i = 0
+          while (!fulfilled) {
+            if (i++ > 10) throw new Error ("Too much waiting")
+            yield value
+          }
         }
       }
 
       throw new Error("Too much yielding")
-    })
-
-    const { resolver } = ref
-    return { result, resolver }
+    }
+    finally {
+      Dispatcher.current = prevDispatcher
+    }
   }
 
   const initer = doo(function* () {
-    run()
+    yield* run()
     /*
     if (ancestor !== scope) {
       console.log ("Ancestor is the one to use!")
@@ -258,32 +301,49 @@ function make(scope: ReconScope, proc: Proc, ...params: any[]) {
   })
   
   function* resolve() {
-    yield* initer
-    console.log ("finished initer")
-    if (handler) return yield* handler()
-    if (resolved !== NEVER) return resolved
-    
     yield revalidator.effect
-    const { result, resolver } = run()
-    console.log ("[resolve]", { result, resolver })
-    if (result !== NON_RECON) return result
+    yield* initer
+    if (handler) return yield* handler()
+    
+    if (resolved !== NEVER) {
+      if (resolved instanceof Promise) {
+        yield new PromiseEffect (resolved)
+        if (resolved instanceof Promise) {
+          throw new Error ("Promise was not resolved!")
+        }
+      }
+      return resolved
+    }
+    
+    const { value, resolver } = yield* run()
+    console.log ("[resolve]", { value, resolver })
+    
+    if (value !== NON_RECON) {
+      resolved = value
+      return resolved
+    }
+    
     if (!resolver) throw new Error ("No resolver!")
     
     const dispatcher = initDispatcher()
+    resolved = dispatcher (() => resolver())
     
-    resolved = dispatcher (() => {
-      try {
-        console.group("Calling resolver:")
-        return resolver()
+    if (resolved instanceof Promise) {
+      resolved = resolved.then ((x) => {
+        console.log ("promise was resolved!!!")
+        resolved = x
+      })
+      
+      yield new PromiseEffect (resolved)
+      if (resolved instanceof Promise) {
+        throw new Error ("Promise was not resolved!")
       }
-      finally {
-        console.groupEnd()
-      }
-    })
+    }
     
     return resolved
   }
   
+  // RUNNER = dispatcher + generator
   
   function Recon (...args: any[]) {
     console.log ("Rendering Recon Component")
@@ -299,9 +359,35 @@ function make(scope: ReconScope, proc: Proc, ...params: any[]) {
       return revalidator.subscribe (rerender)
     }, [ rerender ])
     
-    const { result } = run ()
-    if (typeof result !== "function") return result
-    return result (...args)
+    const locals: DispatcherRef = { scope }
+    const dispatcher = Dispatcher.create()
+    assignBasicHooks(dispatcher, locals)
+    
+    const { use } = Dispatcher.current!
+
+    const render = dispatcher(() => {
+      const iter = proc(...params)
+      // console.log ({ iter })
+
+      for (let i = 0; i < MAX; i++) {
+        const { done, value } = iter.next()
+        if (done) return value
+
+        console.log("yielded on", value)
+        if (value instanceof Subscription) {
+          console.log("extending...")
+          revalidator.extend (value)
+        }
+        else if (value instanceof PromiseEffect) {
+          use (value.promise)
+        }
+      }
+
+      throw new Error("Too much yielding")
+    })
+    
+    if (typeof render !== "function") return render
+    return render (...args)
   }
   
   

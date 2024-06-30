@@ -14,18 +14,70 @@ export function* section$ () {
 }
 */
 
+async function timeout (ms: number) {
+  return new Promise (resolve => setTimeout (resolve, ms))
+}
+
+function BasicCounter (props: {
+  count: number,
+  setCount: (num: number) => void
+}) {
+  function decrement () {
+    props.setCount (props.count - 1)
+  }
+  
+  function increment () {
+    props.setCount (props.count + 1)
+  }
+  
+  const innerClass = "flex-1 w-1/2 flex items-center justify-center"
+  
+  return (
+    <div className={getCounterClass ("blue")}>
+      <button className="flex-1" onClick={decrement}>-</button>
+      <div className={innerClass}>{props.count}</div>
+      <button className="flex-1" onClick={increment}>+</button>
+    </div>
+  )
+}
+
+
+
+let loadingCount = 0
+
+function* initialCount$ () {
+  if (loadingCount++ > 10) throw new Error ("Should not be loading so much")
+  return use$ (async () => {
+    
+    await timeout (1000)
+    return 0
+  })
+}
+
+const initialCount = 0
+
 function* countState$ () {
   // yield* use$ (section$)
+  const initialCount = yield* use$ (initialCount$)
   
   return use$ (() => {
     // return { count: 0, setCount: (num: number) => {}  }
-    const [ count, setCount ] = useState (0)
+    const [ count, setCount ] = useState (initialCount)
     return { count, setCount }
   })
   
   // return { count: 0, setCount: (num: number) => {} }
 }
 
+export function* Counter$ () {
+  const { count, setCount } = yield* use$ (countState$)
+  
+  return () => (
+    <BasicCounter count={count} setCount={setCount} />
+  )
+}
+
+/*
 function* CountChanger$ (amount: number) {
   const { count, setCount } = yield* use$ (countState$)
 
@@ -43,11 +95,9 @@ function* CountChanger$ (amount: number) {
 }
 
 export function* Counter$ () {
-  /*
-  provide$ (section$, () => {
-    console.log ("providing counter")
-  })
-  */
+  // provide$ (section$, () => {
+  //  console.log ("providing counter")
+  // })
   const Decrementor = use$ (CountChanger$, -1)
   const Incrementor = use$ (CountChanger$, 1)
   const { count } = yield* use$ (countState$)
@@ -66,3 +116,4 @@ export function* Counter$ () {
     </div>
   )
 }
+*/

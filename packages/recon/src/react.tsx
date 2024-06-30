@@ -50,7 +50,7 @@ const keys = doo (() => {
   }
 })
 
-function createDispatcher (message: string = "not allowed") {
+function create (message: string = "not allowed") {
   function useRecon (factory: () => any) {
     const prev = internals.H
     try {
@@ -76,8 +76,11 @@ function createDispatcher (message: string = "not allowed") {
 }
 
 export const Dispatcher = {
-  get current () {
-    return internals.H as ReactDispatcher|null
+  create,
+  get current (): ReactDispatcher|null {
+    return internals.H
   },
-  create: createDispatcher,
+  set current (dispatcher: ReactDispatcher|null) {
+    internals.H = dispatcher
+  }
 }
