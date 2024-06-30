@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@reconjs/utils": "workspace:*",
+    "@reconjs/utils-react": "workspace:*",
     "react": "beta",
     "react-dom": "beta",
     "recon": "workspace:*"

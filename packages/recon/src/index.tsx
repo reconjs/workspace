@@ -1,4 +1,4 @@
-import { Fanc, Fanc0, Func, Func0, Subscribe, Vunc, createEvent, memoize, loadPromise } from "@reconjs/utils"
+import { Fanc0, Func, Func0, Subscribe, createEvent, memoize } from "@reconjs/utils"
 import { useInitial } from "@reconjs/utils-react"
 import {
   PropsWithChildren,
@@ -8,7 +8,7 @@ import {
   useReducer,
 } from "react"
 
-import { Dispatcher, ReconDispatcher } from "./react"
+import { Dispatcher } from "./react"
 
 // TYPES
 
@@ -192,6 +192,7 @@ function buildReactDipatchers (update: VoidFunction) {
 type DispatcherVars = {
   scope: ReconScope,
   resolver?: Func,
+  ancestor: ReconScope,
 }
 
 function makeReconDispatcher (vars: DispatcherVars) {
@@ -232,15 +233,14 @@ type HookRef <T = any> = { current: T }
 function make (scope: ReconScope, proc: Proc, ...params: any[]) {
   const displayName: string = (proc as any).displayName ?? proc.name
 
-  console.log("Making a Recon instance...", displayName)
+  console.log ("Making a Recon instance...", displayName)
 
   const revalidator = createRevalidator()
 
   // RUNNER = dispatcher + generator
-  function* run () {
+  function* run (vars: DispatcherVars) {
     ensureRunIsntLooping()
 
-    const vars: DispatcherVars = { scope }
     const dispatcher = makeReconDispatcher (vars)
 
     const prevDispatcher: any = Dispatcher.current
@@ -252,8 +252,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
 
       for (let i = 0; i < MAX; i++) {
         const { done, value } = iter.next()
-        const { resolver } = vars
-        if (done) return { value, resolver }
+        if (done) return value
         console.log ("yielded", value)
         
         if (value instanceof Subscription) {
@@ -306,7 +305,10 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       if (handler) return yield* handler()
       
       if (resolved !== NEVER) return resolved
-      const { value, resolver } = yield* run()
+      
+      const vars: DispatcherVars = { scope, ancestor: scope }
+      const value = yield* run (vars)
+      const { ancestor, resolver } = vars
       
       function resolve () {
         if (value !== NON_RECON) return value
@@ -314,8 +316,6 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
         const dispatcher = createReactDispatcher()
         return dispatcher (() => resolver())
       }
-      
-      const ancestor = scope
       
       if (!hasInited() && ancestor !== scope) {
         console.log ("Ancestor is the one to use!")
@@ -370,7 +370,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       return revalidator.subscribe (rerender)
     }, [ rerender ])
     
-    const vars: DispatcherVars = { scope }
+    const vars: DispatcherVars = { scope, ancestor: scope }
     const dispatcher = makeReconDispatcher (vars)
     
     const { use } = Dispatcher.current!
@@ -392,7 +392,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
         }
       }
 
-      throw new Error("Too much yielding")
+      throw new Error ("Too much yielding")
     })
     
     if (render instanceof Error) {
@@ -421,6 +421,10 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
 
 export class ReconScope {
   readonly parent?: ReconScope
+  
+  get root (): ReconScope {
+    return this.parent?.root ?? this
+  }
 
   constructor (parent?: ReconScope) {
     this.parent = parent

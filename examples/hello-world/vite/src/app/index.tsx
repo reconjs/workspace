@@ -1,46 +1,20 @@
 import { use$ } from "recon"
-import { Counter$ } from "./counter"
 import { Suspense } from "react"
-
-function TogetherCounters () {
-  const Counter = use$ (Counter$)
+import { Separate$ } from "./separate"
+import { Together$ } from "./together"
   
-  const fallback = <div>Loading...</div>
-
-  return <>
-    <Suspense fallback={fallback}>
-      <h1>Counters that update together</h1>
-      <div className="flex flex-row gap-8">
-        <Counter />
-        <Counter />
-      </div>
-    </Suspense >
-  </>
-}
-
-function SeparatelyCounters () {
-  const CounterLeft = use$ (Counter$)
-  const CounterRight = use$ (Counter$)
-
-  return <>
-    <Suspense>
-      <h1>Counters that update separately</h1>
-      <div className="flex flex-row gap-8">
-        <CounterLeft />
-        <CounterRight />
-      </div>
-    </Suspense>
-  </>
-}
+const fallback = <div>Loading...</div>
 
 export function App () {
-  // console.log ("App calling Counter$")
-  // const Counter = use$ (Counter$)
+  const Together = use$ (Together$)
+  const Separate = use$ (Separate$)
 
   return (
-    <main className="flex flex-col items-center justify-center gap-4">
-      <TogetherCounters />
-      <SeparatelyCounters />
+    <main className="flex flex-col items-center justify-center gap-4 p-8">
+      <Suspense fallback={fallback}>
+        <Together className="flex flex-row gap-4" />
+        <Separate className="flex flex-row gap-4" />
+      </Suspense>
     </main>
   )
 }

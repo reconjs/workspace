@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { context$, provide$, use$ } from "recon"
+import { context$, use$ } from "recon"
 
 function getCounterClass (color: string) {
   const flex = "flex flex-row items-center justify-center"
@@ -7,12 +7,6 @@ function getCounterClass (color: string) {
   const divide = `divide-x divide-${color}-500`
   return `h-10 w-40 ${flex} ${border} ${divide}`
 }
-/*
-export function* section$ () {
-  yield context$()
-  return null
-}
-*/
 
 async function timeout (ms: number) {
   return new Promise (resolve => setTimeout (resolve, ms))
@@ -54,19 +48,18 @@ function* initialCount$ () {
   })
 }
 
-const initialCount = 0
+// const initialCount = 0
+// const count = 0
+// const setCount = (num: number) => {}
 
 function* countState$ () {
   // yield* use$ (section$)
   const initialCount = yield* use$ (initialCount$)
   
   return use$ (() => {
-    // return { count: 0, setCount: (num: number) => {}  }
     const [ count, setCount ] = useState (initialCount)
     return { count, setCount }
   })
-  
-  // return { count: 0, setCount: (num: number) => {} }
 }
 
 export function* Counter$ () {
@@ -76,44 +69,3 @@ export function* Counter$ () {
     <BasicCounter count={count} setCount={setCount} />
   )
 }
-
-/*
-function* CountChanger$ (amount: number) {
-  const { count, setCount } = yield* use$ (countState$)
-
-  function onClick () {
-    setCount (count + amount)
-  }
-
-  const content = amount > 0 ? "+" : "-"
-
-  return () => (
-    <button className="flex-1" onClick={onClick}>
-      {content}
-    </button>
-  )
-}
-
-export function* Counter$ () {
-  // provide$ (section$, () => {
-  //  console.log ("providing counter")
-  // })
-  const Decrementor = use$ (CountChanger$, -1)
-  const Incrementor = use$ (CountChanger$, 1)
-  const { count } = yield* use$ (countState$)
-
-  const innerClass = "flex-1 w-1/2 flex items-center justify-center"
-
-  type Props = {
-    color?: string
-  }
-
-  return (props: Props) => (
-    <div className={getCounterClass (props.color ?? "blue")}>
-      <Decrementor />
-      <div className={innerClass}>{count}</div>
-      <Incrementor />
-    </div>
-  )
-}
-*/
