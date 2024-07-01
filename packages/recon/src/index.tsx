@@ -20,6 +20,8 @@ type Prac <T = any, A extends any[] = any[]> = (...args: A) => AsyncGenerator <a
 
 type Returns <F extends Func> = F extends Proc <infer T> ? T : Awaited <ReturnType <F>>
 
+
+
 // MISC
 
 const NEVER = {} as any
@@ -127,31 +129,36 @@ function createRevalidator () {
 
 
 
+// PERSISTENCE HELPER
+
+function buildHooks () {
+  console.log ("Creating refs")
+  const refs = [] as HookRef[]
+  
+  return function initHook () {
+    let index = -1
+    
+    return function hook <T> (initial: () => T): HookRef <T> {
+      index += 1
+      const found = refs [index]
+      if (found) {
+        console.log ("ref found")
+        return found
+      }
+      
+      const current = initial()
+      const ref = { current }
+      refs [index] = ref
+      return ref
+    }
+  }
+}
+
+
 // REACT DISPATCHER
 
 function buildReactDipatchers (update: VoidFunction) {
-  const initHook = doo (() => {
-    console.log ("Creating refs")
-    const refs = [] as HookRef[]
-    
-    return () => {
-      let index = -1
-      
-      return function hook <T> (initial: () => T): HookRef <T> {
-        index += 1
-        const found = refs [index]
-        if (found) {
-          console.log ("ref found")
-          return found
-        }
-        
-        const current = initial()
-        const ref = { current }
-        refs [index] = ref
-        return ref
-      }
-    }
-  })
+  const initHook = buildHooks()
   
   return function getDispatcher () {
     const hook = initHook()
@@ -195,21 +202,32 @@ type DispatcherVars = {
   ancestor: ReconScope,
 }
 
-function makeReconDispatcher (vars: DispatcherVars) {
-  const dispatcher = Dispatcher.create()
+function buildReconDispatchers () {
+  const initHook = buildHooks()
   
-  dispatcher.use$ = (proc, ...params) => {
-    if (proc instanceof GeneratorFunction) {
-      return vars.scope.use (proc, ...params)
+  const getChildScope = memoize ((parent: ReconScope, ...args: any[]) => {
+    return new ReconScope (parent)
+  })
+  
+  return function getDispatcher (vars: DispatcherVars) {
+    const hook = initHook()
+    
+    const dispatcher = Dispatcher.create()
+    
+    dispatcher.use$ = (proc: Func, ...params: any[]) => {
+      if (proc instanceof GeneratorFunction) {
+        const scope = getChildScope (vars.scope, proc, ...params)
+        return scope.use (proc, ...params)
+      }
+      if (typeof proc === "function") {
+        vars.resolver = proc
+        return NON_RECON
+      }
+      throw new Error ("use$ must be called with a generator or function!")
     }
-    if (typeof proc === "function") {
-      vars.resolver = proc
-      return NON_RECON
-    }
-    throw new Error("use$ must be called with a generator or function!")
+    
+    return dispatcher
   }
-  
-  return dispatcher
 }
 
 
@@ -236,12 +254,14 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
   console.log ("Making a Recon instance...", displayName)
 
   const revalidator = createRevalidator()
+  
+  const createReconDispatcher = buildReconDispatchers()
 
   // RUNNER = dispatcher + generator
   function* run (vars: DispatcherVars) {
     ensureRunIsntLooping()
 
-    const dispatcher = makeReconDispatcher (vars)
+    const dispatcher = createReconDispatcher (vars)
 
     const prevDispatcher: any = Dispatcher.current
     Dispatcher.current = dispatcher
@@ -371,21 +391,20 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     }, [ rerender ])
     
     const vars: DispatcherVars = { scope, ancestor: scope }
-    const dispatcher = makeReconDispatcher (vars)
+    const dispatcher = createReconDispatcher (vars)
     
     const { use } = Dispatcher.current!
 
     const render = dispatcher (() => {
       const iter = execute()
-      // console.log ({ iter })
-
+      
       for (let i = 0; i < MAX; i++) {
         const { done, value } = iter.next()
         if (done) return value
 
         console.log("yielded on", value)
         if (value instanceof Subscription) {
-          revalidator.extend (value)
+          
         }
         else if (value instanceof PromiseEffect) {
           use (value.promise)
@@ -442,19 +461,18 @@ export class ReconScope {
   }
   
   use = (proc: Proc, ...params: any[]) => {
-    const displayName: string = (proc as any).displayName ?? proc.name
     const self = this.cache (proc, ...params)
     
     const found = this.get (proc, ...params)
-    if (found) {
-      console.log ("[use] found", displayName)
-      return found
-    }
+    if (found) return found
     
-    console.log ("[use] make", displayName)
     self.current = make (this, proc, ...params)
     return self.current
   }
+}
+
+class RenderScope {
+  
 }
 
 
@@ -509,12 +527,11 @@ export function use$ (resource: any, ...params: any[]): never {
   // @ts-ignore
   if (use$) return use$ (resource, ...params)
   
-  const scope = use (ReconContext)
-  // eslint-disable-next-line
-  // const scope = useInitial (() => new ReconScope (parent))
+  const parent = use (ReconContext)
   
   // makes sure resource doesn't change
   resource = useInitial (() => resource) // eslint-disable-line
+  const scope = useInitial (() => new ReconScope (parent)) // eslint-disable-line
   
   if (resource instanceof GeneratorFunction) {
     // @ts-ignore
