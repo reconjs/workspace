@@ -35,13 +35,6 @@ function* NON_ITERATOR () {}
 
 const GeneratorFunction = NON_ITERATOR.constructor
 
-function unyield (generator: () => Generator) {
-  const iter = generator()
-  const curr = iter.next()
-  if (!curr.done) throw new Error ("[unyield] Generator must not yield!")
-  return curr
-}
-
 
 
 // RERENDER
@@ -77,6 +70,59 @@ class PromiseEffect extends ReconEffect {
     super()
     this.promise = promise
   }
+}
+
+class ProvideEffect extends ReconEffect {
+  constructor (
+    public context: ReconContext, 
+    public handle: Func
+  ) {
+    super()
+  }
+}
+
+class ConsumeEffect extends ReconEffect {
+  params: any[]
+  handler?: Func
+  
+  constructor (
+    public context: ReconContext,
+    ...params: any[]
+  ) {
+    super()
+    this.params = params
+  }
+}
+
+type ReconContext <F extends Func = any> = {
+  (handle: F): ProvideEffect
+  (...args: Parameters<F>): ReturnType <F> extends Reconic 
+    ? ReturnType <F>
+    : Reconic <ReturnType<F>>
+}
+
+export function context <F extends Func> (factory: F) {
+  const subcontexts = new Set <ReconContext>()
+  const dependencies = new Set <ReconContext>()
+  
+  function* consume (...params: any[]): Reconic {
+    const effect = new ConsumeEffect ($Context, ...params)
+    yield effect
+    const handler = effect.handler ?? factory
+    
+    const dispatcher = Dispatcher.create()
+    return dispatcher (() => handler (...params))
+  }
+  
+  function context$ (...args: any[]) {
+    if (typeof args[0] === "function") {
+      return new ProvideEffect ($Context, args[0])
+    }
+    return consume (...args)
+  }
+  
+  const $Context: ReconContext <F> = context$ as any
+  return $Context
 }
 
 
@@ -267,7 +313,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     Dispatcher.current = dispatcher
       
     try {
-      const iter = proc(...params)
+      const iter = proc (...params)
       // console.log ({ iter })
 
       for (let i = 0; i < MAX; i++) {
@@ -439,15 +485,15 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
 // SCOPE
 
 export class ReconScope {
-  readonly parent?: ReconScope
-  
   get root (): ReconScope {
     return this.parent?.root ?? this
   }
 
-  constructor (parent?: ReconScope) {
-    this.parent = parent
-  }
+  constructor (
+    private readonly parent?: ReconScope, 
+    private readonly override?: Proc, 
+    private readonly handler?: Proc0
+  ) {}
   
   private cache = memoize ((proc: Proc, ...params: any[]) => ({}) as {
     current: Proc0
@@ -471,10 +517,6 @@ export class ReconScope {
   }
 }
 
-class RenderScope {
-  
-}
-
 
 // PROVIDER
 
@@ -486,16 +528,16 @@ const NON_SCOPE = doo (() => {
   return res
 })
 
-const ReconContext = createContext (NON_SCOPE)
+const ReconProvided = createContext (NON_SCOPE)
 
 export function ReconProvider (props: PropsWithChildren <{}>) {
   // TODO: ID for when suspended
   const scope = useInitial (() => new ReconScope())
 
   return (
-    <ReconContext value={scope}>
+    <ReconProvided value={scope}>
       {props.children}
-    </ReconContext>
+    </ReconProvided>
   )
 }
 
@@ -527,7 +569,7 @@ export function use$ (resource: any, ...params: any[]): never {
   // @ts-ignore
   if (use$) return use$ (resource, ...params)
   
-  const parent = use (ReconContext)
+  const parent = use (ReconProvided)
   
   // makes sure resource doesn't change
   resource = useInitial (() => resource) // eslint-disable-line
@@ -539,16 +581,4 @@ export function use$ (resource: any, ...params: any[]): never {
   }
   // TODO: What if it's a function?
   throw new Error ("use$ does not support [whatever resource is]")
-}
-
-export function provide$ (resource: any, override: Func) {
-  const handler = Dispatcher.current?.provide$
-  if (!handler) throw new Error ("provide$ does not exist")
-  handler (resource, override)
-}
-
-export function context$ (...params: any[]) {
-  const handler = Dispatcher.current?.context$
-  if (!handler) throw new Error ("context$ does not exist")
-  return handler (...params)
 }

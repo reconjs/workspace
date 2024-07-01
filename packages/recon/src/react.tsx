@@ -16,11 +16,13 @@ type ReactHooks = {
 }
 
 type ReconHooks = {
-  context$: (...params: any[]) => Generator <any, void, any>,
-  provide$: (resource: Proc, handler: Func) => void,
-  resolve$: Proc,
+  // perform$: (...params: any[]) => Generator <any, void, any>,
+  // handle$: (resource: Proc, handler: Func) => void,
+  // resolve$: Proc,
   use$: (resource: Func, ...params: any[]) => any,
 }
+
+
 
 type ReactDispatcher = ReactHooks & Partial <ReconHooks>
 
