@@ -417,16 +417,17 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     const buildHoist = doo (() => {
       let inited = false
       return () => {
-        if (inited) return
+        // if (inited) return
         inited = true
         return function hoist (consumed: ReconScope) {
           console.log ("Hoisting...", displayName, guidBy (consumed))
           
-          if (ancestor.depth > consumed.depth) return
+          if (ancestor.depth >= consumed.depth) return
           if (consumed.depth > scope.depth) {
             console.warn ("Unclear what behavior is expected!")
             return
           }
+          if (inited) console.warn ("Why are we changing this now?")
           ancestor = consumed
         }
       }

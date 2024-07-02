@@ -7,6 +7,7 @@ import { PropsOf } from "@reconjs/utils-react"
 const fallback = <div>Loading...</div>
 
 const Together = (props: PropsOf <"div">) => null
+const Separate = (props: PropsOf <"div">) => null
 
 export function App () {
   const Together = use$ (Together$)

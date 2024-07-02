@@ -58,7 +58,7 @@ const initialCount = 0
 
 function* countState$ () {
   const section = yield* $Section()
-  // const initialCount = yield* use$ (initialCount$)
+  const initialCount = yield* use$ (initialCount$)
   
   return use$ (() => {
     const [ count, setCount ] = useState (initialCount)
