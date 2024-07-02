@@ -4,25 +4,24 @@
     "hello:legacy": "nx dev hello-legacy",
     "hello:next": "nx dev hello-next",
     "hello:vite": "nx dev hello-vite",
-    "lolalemon:legacy": "nx dev lolalemon-legacy",
-    "lolalemon:vite": "nx dev lolalemon-vite",
+    "lolalemon": "nx dev lolalemon",
     "tweeter:legacy": "nx dev tweeter-legacy"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.3",
     "@types/lodash": "^4.14.200",
     "@types/node": "^20.8.10",
-    "@types/react": "npm:types-react@beta",
-    "@types/react-dom": "npm:types-react-dom@beta",
+    "@types/react": "npm:types-react@rc",
+    "@types/react-dom": "npm:types-react-dom@rc",
     "@types/uuid": "^9.0.6",
     "eslint": "^8.52.0",
     "eslint-config-next": "latest",
-    "next": "^14.0.3",
+    "next": "rc",
     "nx": "^17.0.2",
     "typescript": "^5.2.2"
   },
   "overrides": {
-    "@types/react": "npm:types-react@beta",
-    "@types/react-dom": "npm:types-react-dom@beta"
+    "@types/react": "npm:types-react@rc",
+    "@types/react-dom": "npm:types-react-dom@rc"
   }
 }

@@ -417,6 +417,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     const buildHoist = doo (() => {
       let inited = false
       return () => {
+        // TODO: We shouldn't need to re-evaluate so often...
         // if (inited) return
         inited = true
         return function hoist (consumed: ReconScope) {
