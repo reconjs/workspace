@@ -1,5 +1,9 @@
 import { useState } from "react"
-import { context$, use$ } from "recon"
+import { context, use$ } from "recon"
+
+export const $Section = context (() => {
+  return null
+})
 
 function getCounterClass (color: string) {
   const flex = "flex flex-row items-center justify-center"
@@ -48,13 +52,13 @@ function* initialCount$ () {
   })
 }
 
-// const initialCount = 0
+const initialCount = 0
 // const count = 0
 // const setCount = (num: number) => {}
 
 function* countState$ () {
-  // yield* use$ (section$)
-  const initialCount = yield* use$ (initialCount$)
+  const section = yield* $Section()
+  // const initialCount = yield* use$ (initialCount$)
   
   return use$ (() => {
     const [ count, setCount ] = useState (initialCount)

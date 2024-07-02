@@ -1,9 +1,12 @@
 import { use$ } from "recon"
-import { Suspense } from "react"
+import { Fragment, Suspense } from "react"
 import { Separate$ } from "./separate"
 import { Together$ } from "./together"
+import { PropsOf } from "@reconjs/utils-react"
   
 const fallback = <div>Loading...</div>
+
+const Together = (props: PropsOf <"div">) => null
 
 export function App () {
   const Together = use$ (Together$)

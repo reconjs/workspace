@@ -1,4 +1,4 @@
-import { Fanc0, Func, Func0, Subscribe, createEvent, memoize } from "@reconjs/utils"
+import { Fanc0, Func, Func0, Subscribe, Vunc, createEvent, guidBy, memoize } from "@reconjs/utils"
 import { useInitial } from "@reconjs/utils-react"
 import {
   PropsWithChildren,
@@ -74,7 +74,7 @@ class PromiseEffect extends ReconEffect {
 
 class ProvideEffect extends ReconEffect {
   constructor (
-    public context: ReconContext, 
+    public context: ReconContext <any>, 
     public handle: Func
   ) {
     super()
@@ -86,7 +86,7 @@ class ConsumeEffect extends ReconEffect {
   handler?: Func
   
   constructor (
-    public context: ReconContext,
+    public context: ReconContext <any>,
     ...params: any[]
   ) {
     super()
@@ -94,16 +94,28 @@ class ConsumeEffect extends ReconEffect {
   }
 }
 
-type ReconContext <F extends Func = any> = {
+class HoistEffect extends ReconEffect {
+  constructor (public scope: ReconScope) {
+    super()
+  }
+}
+
+
+
+// CONTEXT
+
+type ReconContext <F extends Func> = {
+  displayName: string,
   (handle: F): ProvideEffect
-  (...args: Parameters<F>): ReturnType <F> extends Reconic 
+  (...args: Parameters <F>): (ReturnType <F> extends AnyGenerator
     ? ReturnType <F>
-    : Reconic <ReturnType<F>>
+    : Reconic <ReturnType <F>>
+  )
 }
 
 export function context <F extends Func> (factory: F) {
-  const subcontexts = new Set <ReconContext>()
-  const dependencies = new Set <ReconContext>()
+  const subcontexts = new Set <ReconContext <any>>()
+  const dependencies = new Set <ReconContext <any>>()
   
   function* consume (...params: any[]): Reconic {
     const effect = new ConsumeEffect ($Context, ...params)
@@ -122,6 +134,9 @@ export function context <F extends Func> (factory: F) {
   }
   
   const $Context: ReconContext <F> = context$ as any
+  
+  // @ts-ignore
+  $Context.displayName = `Context#${guidBy ($Context)}`
   return $Context
 }
 
@@ -201,6 +216,7 @@ function buildHooks () {
 }
 
 
+
 // REACT DISPATCHER
 
 function buildReactDipatchers (update: VoidFunction) {
@@ -245,7 +261,6 @@ function buildReactDipatchers (update: VoidFunction) {
 type DispatcherVars = {
   scope: ReconScope,
   resolver?: Func,
-  ancestor: ReconScope,
 }
 
 function buildReconDispatchers () {
@@ -258,10 +273,16 @@ function buildReconDispatchers () {
   return function getDispatcher (vars: DispatcherVars) {
     const hook = initHook()
     
+    const initialScope = vars.scope
+    console.log ("getDispatcher scope =", guidBy (vars.scope))
+    
     const dispatcher = Dispatcher.create()
     
     dispatcher.use$ = (proc: Func, ...params: any[]) => {
       if (proc instanceof GeneratorFunction) {
+        if (initialScope !== vars.scope) {
+          console.log ("scope changed!", { initialScope, ...vars })
+        }
         const scope = getChildScope (vars.scope, proc, ...params)
         return scope.use (proc, ...params)
       }
@@ -294,24 +315,32 @@ const ensureRunIsntLooping = doo (() => {
 
 type HookRef <T = any> = { current: T }
 
-function make (scope: ReconScope, proc: Proc, ...params: any[]) {
-  const displayName: string = (proc as any).displayName ?? proc.name
+function nameOf (proc: Proc): string {
+  return (proc as any).displayName ?? proc.name
+}
 
-  console.log ("Making a Recon instance...", displayName)
+function make (scope: ReconScope, proc: Proc, ...params: any[]) {  
+  const displayName = nameOf (proc)
+
+  console.log ("[make]", displayName, scope)
 
   const revalidator = createRevalidator()
   
   const createReconDispatcher = buildReconDispatchers()
+  
+  const initProviderHook = buildHooks()
 
   // RUNNER = dispatcher + generator
-  function* run (vars: DispatcherVars) {
+  function* run (vars: DispatcherVars, hoist?: Vunc<[ ReconScope ]>) {
     ensureRunIsntLooping()
 
     const dispatcher = createReconDispatcher (vars)
 
     const prevDispatcher: any = Dispatcher.current
     Dispatcher.current = dispatcher
-      
+    
+    const hook = initProviderHook()
+    
     try {
       const iter = proc (...params)
       // console.log ({ iter })
@@ -336,6 +365,32 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
             yield value
           }
         }
+        else if (value instanceof ConsumeEffect) {
+          console.log ("CONSUMING", guidBy (value.context))
+          if (scope === scope.root) {
+            console.warn ("Consuming from root scope!")
+          }
+          const found = scope.find (value.context)
+          if (found) {
+            value.handler = found.handler
+            // yield new HoistEffect (found)
+            if (hoist) console.log ("HOISTING!", found, scope)
+            else console.warn ("NOT HOISTING!")
+            hoist?.(found)
+          }
+        }
+        else if (value instanceof HoistEffect) {
+          // yield value
+          hoist?.(value.scope)
+        }
+        else if (value instanceof ProvideEffect) {
+          const { current } = hook (() => {
+            return new ReconScope (vars.scope, value.context, value.handle)
+          })
+          
+          console.log ("PROVIDED!", current.displayName)
+          vars.scope = current
+        }
         else {
           console.warn ("Unexpected yield!")
         }
@@ -351,15 +406,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
   const createReactDispatcher = buildReactDipatchers (revalidator.push)
 
   const execute = doo (() => {
-    const hasInited = doo (() => {
-      let inited = false
-      return () => {
-        let res = inited
-        inited = true
-        return res
-      }
-    })
-    
+    let ancestor = scope.root
     let handler: Proc0
     
     let resolved = NEVER
@@ -367,14 +414,36 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       resolved = NEVER
     })
     
-    return function* exec () {
+    const buildHoist = doo (() => {
+      let inited = false
+      return () => {
+        if (inited) return
+        inited = true
+        return function hoist (consumed: ReconScope) {
+          console.log ("Hoisting...", displayName, guidBy (consumed))
+          
+          if (ancestor.depth > consumed.depth) return
+          if (consumed.depth > scope.depth) {
+            console.warn ("Unclear what behavior is expected!")
+            return
+          }
+          ancestor = consumed
+        }
+      }
+    })
+    
+    return function* exec (force?: boolean) {
       if (handler) return yield* handler()
+      
+      const hoist = buildHoist()
+      if (!hoist) yield new HoistEffect (ancestor)
       
       if (resolved !== NEVER) return resolved
       
-      const vars: DispatcherVars = { scope, ancestor: scope }
-      const value = yield* run (vars)
-      const { ancestor, resolver } = vars
+      const vars: DispatcherVars = { scope }
+      const value = yield* run (vars, hoist)
+      
+      const { resolver } = vars
       
       function resolve () {
         if (value !== NON_RECON) return value
@@ -383,9 +452,9 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
         return dispatcher (() => resolver())
       }
       
-      if (!hasInited() && ancestor !== scope) {
-        console.log ("Ancestor is the one to use!")
-        handler = ancestor.use (proc, ...params)
+      if (!force && hoist && ancestor !== scope) {
+        console.log ("Ancestor is the one to use!", ancestor)
+        handler = () => ancestor.use (proc, ...params)
         // add to the correct place...
         return yield* handler()
       }
@@ -436,13 +505,13 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       return revalidator.subscribe (rerender)
     }, [ rerender ])
     
-    const vars: DispatcherVars = { scope, ancestor: scope }
+    const vars: DispatcherVars = { scope }
     const dispatcher = createReconDispatcher (vars)
     
     const { use } = Dispatcher.current!
 
     const render = dispatcher (() => {
-      const iter = execute()
+      const iter = execute(true)
       
       for (let i = 0; i < MAX; i++) {
         const { done, value } = iter.next()
@@ -488,15 +557,23 @@ export class ReconScope {
   get root (): ReconScope {
     return this.parent?.root ?? this
   }
+  
+  get depth (): number {
+    return this.parent ? this.parent.depth + 1 : 0
+  }
+  
+  readonly displayName: string
 
   constructor (
     private readonly parent?: ReconScope, 
-    private readonly override?: Proc, 
-    private readonly handler?: Proc0
-  ) {}
+    public readonly context?: Proc,
+    public readonly handler?: Proc0
+  ) {
+    this.displayName = `Scope#${guidBy (this)}`
+  }
   
   private cache = memoize ((proc: Proc, ...params: any[]) => ({}) as {
-    current: Proc0
+    current: Reconic
   })
   
   private get = (proc: Proc, ...params: any[]): Proc0|undefined => {
@@ -507,13 +584,28 @@ export class ReconScope {
   }
   
   use = (proc: Proc, ...params: any[]) => {
+    console.log ("[Scope::use]", nameOf (proc), this)
+    
     const self = this.cache (proc, ...params)
     
     const found = this.get (proc, ...params)
     if (found) return found
     
-    self.current = make (this, proc, ...params)
+    const made = make (this, proc, ...params)
+    
+    // const found2 = this.get (proc, ...params)
+    // if (found2) return found
+    
+    self.current = made
     return self.current
+  }
+  
+  find = (context: ReconContext <any>): ReconScope|undefined => {
+    console.log ("Finding...", this, context)
+    if (this.context === context) {
+      return this
+    }
+    return this.parent?.find (context)
   }
 }
 
