@@ -1,6 +1,7 @@
-import { Fanc0, Func, Func0, Subscribe, Vunc, createEvent, guidBy, memoize } from "@reconjs/utils"
+import { Fanc0, Func, Func0, Subscribe, Vunc, createEvent, guidBy, loadPromise, memoize } from "@reconjs/utils"
 import { useInitial } from "@reconjs/utils-react"
 import {
+  Fragment,
   PropsWithChildren,
   createContext,
   use,
@@ -25,7 +26,7 @@ type Returns <F extends Func> = F extends Proc <infer T> ? T : Awaited <ReturnTy
 // MISC
 
 const NEVER = {} as any
-const MAX = 100
+const MAX = 20
 
 function doo <T> (func: () => T) {
   return func()
@@ -96,6 +97,12 @@ class ConsumeEffect extends ReconEffect {
 
 class HoistEffect extends ReconEffect {
   constructor (public scope: ReconScope) {
+    super()
+  }
+}
+
+class ErrorEffect extends ReconEffect {
+  constructor (public error: any) {
     super()
   }
 }
@@ -271,7 +278,7 @@ function buildReconDispatchers () {
   })
   
   return function getDispatcher (vars: DispatcherVars) {
-    const hook = initHook()
+    // const hook = initHook()
     
     const initialScope = vars.scope
     console.log ("getDispatcher scope =", guidBy (vars.scope))
@@ -305,7 +312,7 @@ const ensureRunIsntLooping = doo (() => {
   let runCount = 0
   
   setInterval(() => {
-    runCount -= 20
+    runCount -= 5
   }, 100)
   
   return () => {
@@ -335,72 +342,67 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     ensureRunIsntLooping()
 
     const dispatcher = createReconDispatcher (vars)
-
-    const prevDispatcher: any = Dispatcher.current
-    Dispatcher.current = dispatcher
     
     const hook = initProviderHook()
     
-    try {
-      const iter = proc (...params)
-      // console.log ({ iter })
+    const iter = dispatcher (() => proc (...params))
+    // console.log ({ iter })
 
-      for (let i = 0; i < MAX; i++) {
-        const { done, value } = iter.next()
-        if (done) return value
-        console.log ("yielded", value)
+    for (let i = 0; i < MAX; i++) {
+      const { done, value } = dispatcher (() => iter.next())
+      if (done) return value
+      console.log ("yielded", value)
+      
+      if (value instanceof Subscription) {
+        revalidator.extend (value)
+      }
+      else if (value instanceof PromiseEffect) {
+        let fulfilled = false
+        value.promise.finally (() => {
+          fulfilled = true
+        })
         
-        if (value instanceof Subscription) {
-          revalidator.extend (value)
-        }
-        else if (value instanceof PromiseEffect) {
-          let fulfilled = false
-          value.promise.finally (() => {
-            fulfilled = true
-          })
-          
-          let i = 0
-          while (!fulfilled) {
-            if (i++ > 10) throw new Error ("Too much waiting")
-            yield value
-          }
-        }
-        else if (value instanceof ConsumeEffect) {
-          console.log ("CONSUMING", guidBy (value.context))
-          if (scope === scope.root) {
-            console.warn ("Consuming from root scope!")
-          }
-          const found = scope.find (value.context)
-          if (found) {
-            value.handler = found.handler
-            // yield new HoistEffect (found)
-            if (hoist) console.log ("HOISTING!", found, scope)
-            else console.warn ("NOT HOISTING!")
-            hoist?.(found)
-          }
-        }
-        else if (value instanceof HoistEffect) {
-          // yield value
-          hoist?.(value.scope)
-        }
-        else if (value instanceof ProvideEffect) {
-          const { current } = hook (() => {
-            return new ReconScope (vars.scope, value.context, value.handle)
-          })
-          
-          console.log ("PROVIDED!", current.displayName)
-          vars.scope = current
-        }
-        else {
-          console.warn ("Unexpected yield!")
+        let i = 0
+        while (!fulfilled) {
+          if (i++ > 10) throw new Error ("Too much waiting")
+          yield value
         }
       }
+      else if (value instanceof ConsumeEffect) {
+        console.log ("CONSUMING", guidBy (value.context))
+        if (scope === scope.root) {
+          console.warn ("Consuming from root scope!")
+        }
+        const found = scope.find (value.context)
+        if (found) {
+          value.handler = found.handler
+          // yield new HoistEffect (found)
+          if (hoist) console.log ("HOISTING!", found, scope)
+          else console.warn ("NOT HOISTING!")
+          hoist?.(found)
+        }
+      }
+      else if (value instanceof HoistEffect) {
+        // yield value
+        hoist?.(value.scope)
+      }
+      else if (value instanceof ProvideEffect) {
+        const { current } = hook (() => {
+          return new ReconScope (vars.scope, value.context, value.handle)
+        })
+        
+        console.log ("PROVIDED!", current.displayName)
+        vars.scope = current
+      }
+      else if (value instanceof ErrorEffect) {
+        throw value.error
+      }
+      else {
+        console.warn ("Unexpected yield!")
+      }
+    }
 
-      throw new Error("Too much yielding")
-    }
-    finally {
-      Dispatcher.current = prevDispatcher
-    }
+    throw new Error("Too much yielding")
   }
   
   const createReactDispatcher = buildReactDipatchers (revalidator.push)
@@ -442,26 +444,25 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       
       if (resolved !== NEVER) return resolved
       
-      const vars: DispatcherVars = { scope }
-      const value = yield* run (vars, hoist)
-      
-      const { resolver } = vars
-      
-      function resolve () {
-        if (value !== NON_RECON) return value
-        if (!resolver) throw new Error ("No resolver!")
-        const dispatcher = createReactDispatcher()
-        return dispatcher (() => resolver())
-      }
-      
-      if (!force && hoist && ancestor !== scope) {
-        console.log ("Ancestor is the one to use!", ancestor)
-        handler = () => ancestor.use (proc, ...params)
-        // add to the correct place...
-        return yield* handler()
-      }
-      
       try {
+        const vars: DispatcherVars = { scope }
+        const value = yield* run (vars, hoist)
+        
+        function resolve () {
+          if (value !== NON_RECON) return value
+          const { resolver } = vars
+          if (!resolver) throw new Error ("No resolver!")
+          const dispatcher = createReactDispatcher()
+          return dispatcher (() => resolver())
+        }
+        
+        if (!force && hoist && ancestor !== scope) {
+          console.log ("Ancestor is the one to use!", ancestor)
+          handler = () => ancestor.use (proc, ...params)
+          // add to the correct place...
+          return yield* handler()
+        }
+        
         resolved = resolve()
       }
       catch (thrown) {
@@ -479,6 +480,11 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
   
   function* resolve() {
     const resolved = yield* execute()
+    
+    if (resolved instanceof Error) {
+      yield new ErrorEffect (resolved)
+      throw new Error ("ErrorEffect didn't work!!!")
+    }
     
     if (resolved instanceof Promise) {
       yield new PromiseEffect (resolved)
@@ -510,21 +516,30 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     const vars: DispatcherVars = { scope }
     const dispatcher = createReconDispatcher (vars)
     
-    const { use } = Dispatcher.current!
+    const iter = execute (true)
 
     const render = dispatcher (() => {
-      const iter = execute(true)
-      
       for (let i = 0; i < MAX; i++) {
         const { done, value } = iter.next()
         if (done) return value
+        if (value instanceof Error) {
+          console.log ("returned error")
+          throw value
+        }
+        if (value instanceof Promise) {
+          loadPromise (value)
+        }
 
         console.log("yielded on", value)
         if (value instanceof Subscription) {
           
         }
         else if (value instanceof PromiseEffect) {
-          use (value.promise)
+          loadPromise (value.promise)
+        }
+        else if (value instanceof ErrorEffect) {
+          console.error ("Error Effect")
+          throw value.error
         }
       }
 
@@ -658,10 +673,17 @@ export function use$ <T extends Fanc0 <Func>> (arg: T): never
 export function use$ <T extends Fanc0> (loader: T): Reconic <Returns <T>>
 export function use$ <T extends Func0> (hook: T): Reconic <ReturnType <T>>
 
+const ssrPromise = new Promise (resolve => resolve (Fragment))
+
+const WINDOW = typeof window !== "undefined" ? window as any : null
+
 export function use$ (resource: any, ...params: any[]): never {
   const use$ = Dispatcher.current?.use$
   // @ts-ignore
   if (use$) return use$ (resource, ...params)
+  
+  // @ts-ignore
+  if (!WINDOW) return use (ssrPromise)
   
   const parent = use (ReconProvided)
   
@@ -675,4 +697,8 @@ export function use$ (resource: any, ...params: any[]): never {
   }
   // TODO: What if it's a function?
   throw new Error ("use$ does not support [whatever resource is]")
+}
+
+export function useDispatcherId$ () {
+  return Dispatcher.current && guidBy (Dispatcher.current)
 }

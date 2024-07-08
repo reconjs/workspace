@@ -4,7 +4,8 @@
     "hello:legacy": "nx dev hello-legacy",
     "hello:next": "nx dev hello-next",
     "hello:vite": "nx dev hello-vite",
-    "lolalemon": "nx dev lolalemon",
+    "lolalemon:next": "nx dev lolalemon-next",
+    "lolalemon:vite": "nx dev lolalemon-vite",
     "tweeter:legacy": "nx dev tweeter-legacy"
   },
   "devDependencies": {

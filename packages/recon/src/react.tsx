@@ -32,6 +32,10 @@ export type ReconDispatcher = ReactHooks & ReconHooks & {
 
 // @ts-ignore
 const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+if (!internals) {
+  console.log (Object.keys (React))
+  throw new Error ("INTERNALS NOT FOUND")
+}
 
 
 
@@ -55,12 +59,17 @@ const keys = doo (() => {
 function create (message: string = "not allowed") {
   function useRecon (factory: () => any) {
     const prev = internals.H
+    console.group ("useRecon")
     try {
       internals.H = dispatcher
       // console.log ({ dispatcher })
       return factory()
     }
     finally {
+      if (internals.H !== dispatcher) {
+        console.error ("Dispatcher changed during useRecon")
+      }
+      console.groupEnd ()
       internals.H = prev
     }
   }
