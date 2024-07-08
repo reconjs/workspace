@@ -26,7 +26,7 @@ type Returns <F extends Func> = F extends Proc <infer T> ? T : Awaited <ReturnTy
 // MISC
 
 const NEVER = {} as any
-const MAX = 20
+const MAX = 200
 
 function doo <T> (func: () => T) {
   return func()
@@ -312,7 +312,7 @@ const ensureRunIsntLooping = doo (() => {
   let runCount = 0
   
   setInterval(() => {
-    runCount -= 5
+    runCount -= 10
   }, 100)
   
   return () => {
@@ -380,11 +380,13 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
           if (hoist) console.log ("HOISTING!", found, scope)
           else console.warn ("NOT HOISTING!")
           hoist?.(found)
+          yield new HoistEffect (found)
         }
       }
       else if (value instanceof HoistEffect) {
         // yield value
         hoist?.(value.scope)
+        yield value
       }
       else if (value instanceof ProvideEffect) {
         const { current } = hook (() => {
@@ -417,11 +419,14 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
     })
     
     const buildHoist = doo (() => {
-      let inited = false
       return () => {
         // TODO: We shouldn't need to re-evaluate so often...
-        // if (inited) return
-        inited = true
+        const inited = doo (() => {
+          if (resolved instanceof Promise) return false
+          return resolved !== NEVER
+        })
+        
+        if (inited) return
         return function hoist (consumed: ReconScope) {
           console.log ("Hoisting...", displayName, guidBy (consumed))
           
@@ -440,8 +445,7 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       if (handler) return yield* handler()
       
       const hoist = buildHoist()
-      if (!hoist) yield new HoistEffect (ancestor)
-      
+      if (!hoist) yield new HoistEffect (scope)
       if (resolved !== NEVER) return resolved
       
       try {
@@ -546,6 +550,9 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       throw new Error ("Too much yielding")
     })
     
+    if (render instanceof Promise) {
+      loadPromise (render)
+    }
     if (render instanceof Error) {
       throw render
     }
@@ -553,7 +560,11 @@ function make (scope: ReconScope, proc: Proc, ...params: any[]) {
       console.log (render)
       throw new Error (`WTF this is supposed to be a function (in ${displayName})`)
     }
-    return render (...args)
+    return (
+      <Recontext value={scope}>
+        {render(...args)}
+      </Recontext>
+    )
   }
   
   
@@ -637,16 +648,16 @@ const NON_SCOPE = doo (() => {
   return res
 })
 
-const ReconProvided = createContext (NON_SCOPE)
+const Recontext = createContext (NON_SCOPE)
 
 export function ReconProvider (props: PropsWithChildren <{}>) {
   // TODO: ID for when suspended
   const scope = useInitial (() => new ReconScope())
 
   return (
-    <ReconProvided value={scope}>
+    <Recontext value={scope}>
       {props.children}
-    </ReconProvided>
+    </Recontext>
   )
 }
 
@@ -657,6 +668,10 @@ export function ReconProvider (props: PropsWithChildren <{}>) {
 const NO_USE: typeof use = () => {
   throw new Error ("use does not exist")
 }
+
+const ssrPromise = new Promise (resolve => resolve (Fragment))
+
+const WINDOW = typeof window !== "undefined" ? window as any : null
 
 // Async Generators for lists?
 export function use$ <P extends Prac> (
@@ -673,10 +688,6 @@ export function use$ <T extends Fanc0 <Func>> (arg: T): never
 export function use$ <T extends Fanc0> (loader: T): Reconic <Returns <T>>
 export function use$ <T extends Func0> (hook: T): Reconic <ReturnType <T>>
 
-const ssrPromise = new Promise (resolve => resolve (Fragment))
-
-const WINDOW = typeof window !== "undefined" ? window as any : null
-
 export function use$ (resource: any, ...params: any[]): never {
   const use$ = Dispatcher.current?.use$
   // @ts-ignore
@@ -685,7 +696,7 @@ export function use$ (resource: any, ...params: any[]): never {
   // @ts-ignore
   if (!WINDOW) return use (ssrPromise)
   
-  const parent = use (ReconProvided)
+  const parent = use (Recontext)
   
   // makes sure resource doesn't change
   resource = useInitial (() => resource) // eslint-disable-line
