@@ -6,7 +6,8 @@
     "hello:vite": "nx dev hello-vite",
     "lolalemon:next": "nx dev lolalemon-next",
     "lolalemon:vite": "nx dev lolalemon-vite",
-    "tweeter:legacy": "nx dev tweeter-legacy"
+    "tweeter:legacy": "nx dev tweeter-legacy",
+    "test": "nx test hello-vite"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.3",

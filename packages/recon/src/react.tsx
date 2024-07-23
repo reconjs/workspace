@@ -1,6 +1,6 @@
 import { Func, Vunc } from "@reconjs/utils"
 import React from "react"
-import { Proc } from "./index"
+import { AnyGenerator, Proc, Proc0 } from "./types"
 
 function doo <T> (func: () => T) {
   return func()
@@ -19,6 +19,7 @@ type ReconHooks = {
   // perform$: (...params: any[]) => Generator <any, void, any>,
   // handle$: (resource: Proc, handler: Func) => void,
   // resolve$: Proc,
+  get$: (resource: Func, ...params: any[]) => Proc0,
   use$: (resource: Func, ...params: any[]) => any,
 }
 
