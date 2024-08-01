@@ -1,2 +1,2 @@
 // export { get$, run$ } from "./get"
-export { get$, use$ } from "./use"
+export { get$, use$, Regenerator } from "./use"
