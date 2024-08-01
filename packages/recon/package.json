@@ -6,9 +6,6 @@
   "exports": {
     ".": "./src/index.tsx"
   },
-  "scripts": {
-    "test": "vitest"
-  },
   "dependencies": {
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-react": "workspace:*",

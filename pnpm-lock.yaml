@@ -271,9 +271,18 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/recon
     devDependencies:
+      '@testing-library/jest-dom':
+        specifier: '*'
+        version: 6.4.6(vitest@2.0.4(@types/node@20.8.10)(jsdom@24.1.1))
+      '@testing-library/react':
+        specifier: '*'
+        version: 16.0.0(@testing-library/dom@10.4.0)(@types/react@18.3.2)(react-dom@19.0.0-rc-d025ddd3-20240722(react@19.0.0-rc-d025ddd3-20240722))(react@19.0.0-rc-d025ddd3-20240722)(types-react-dom@19.0.0-rc.1)
       '@vitejs/plugin-react':
         specifier: ^4.2.1
         version: 4.2.1(vite@5.2.11(@types/node@20.8.10))
+      jsdom:
+        specifier: '*'
+        version: 24.1.1
       tailwindcss:
         specifier: ^3.4.3
         version: 3.4.3
@@ -283,6 +292,9 @@ importers:
       vite:
         specifier: ^5.2.11
         version: 5.2.11(@types/node@20.8.10)
+      vitest:
+        specifier: ^2.0.4
+        version: 2.0.4(@types/node@20.8.10)(jsdom@24.1.1)
 
   examples/tweeter/legacy:
     dependencies:
@@ -4017,6 +4029,16 @@ snapshots:
       '@types/react': 18.3.2
       '@types/react-dom': types-react-dom@19.0.0-rc.1
 
+  '@testing-library/react@16.0.0(@testing-library/dom@10.4.0)(@types/react@18.3.2)(react-dom@19.0.0-rc-d025ddd3-20240722(react@19.0.0-rc-d025ddd3-20240722))(react@19.0.0-rc-d025ddd3-20240722)(types-react-dom@19.0.0-rc.1)':
+    dependencies:
+      '@babel/runtime': 7.23.2
+      '@testing-library/dom': 10.4.0
+      react: 19.0.0-rc-d025ddd3-20240722
+      react-dom: 19.0.0-rc-d025ddd3-20240722(react@19.0.0-rc-d025ddd3-20240722)
+    optionalDependencies:
+      '@types/react': 18.3.2
+      '@types/react-dom': types-react-dom@19.0.0-rc.1
+
   '@types/aria-query@5.0.4': {}
 
   '@types/babel__core@7.20.5':
@@ -6233,7 +6255,7 @@ snapshots:
   tough-cookie@4.1.4:
     dependencies:
       psl: 1.9.0
-      punycode: 2.3.0
+      punycode: 2.3.1
       universalify: 0.2.0
       url-parse: 1.5.10
 

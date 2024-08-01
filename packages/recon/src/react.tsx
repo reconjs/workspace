@@ -1,5 +1,5 @@
 import { Func, Vunc } from "@reconjs/utils"
-import React from "react"
+import React, { useRef } from "react"
 import { AnyGenerator, Proc, Proc0 } from "./types"
 
 function doo <T> (func: () => T) {
@@ -19,8 +19,9 @@ type ReconHooks = {
   // perform$: (...params: any[]) => Generator <any, void, any>,
   // handle$: (resource: Proc, handler: Func) => void,
   // resolve$: Proc,
-  get$: (resource: Func, ...params: any[]) => Proc0,
+  get$: (resource: Func, ...params: any[]) => any,
   use$: (resource: Func, ...params: any[]) => any,
+  _use: (func: Func) => any,
 }
 
 
@@ -95,4 +96,25 @@ export const Dispatcher = {
   set current (dispatcher: ReactDispatcher|null) {
     internals.H = dispatcher
   }
+}
+
+const NEVER = {} as any
+
+/**
+ * A hook for a constant
+ */
+export function _use <T> (factory: () => T) {
+  const dispatcher = Dispatcher.current
+  if (!dispatcher) return factory()
+  
+  const { _use } = dispatcher
+  if (_use) return _use (factory)
+  
+  const ref = dispatcher.useRef (NEVER) // eslint-disable-line
+
+  if (ref.current === NEVER) {
+    ref.current = factory()
+  }
+
+  return ref.current as T
 }

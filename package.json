@@ -4,10 +4,11 @@
     "hello:legacy": "nx dev hello-legacy",
     "hello:next": "nx dev hello-next",
     "hello:vite": "nx dev hello-vite",
+    "hello:test": "nx test hello-vite",
     "lolalemon:next": "nx dev lolalemon-next",
     "lolalemon:vite": "nx dev lolalemon-vite",
-    "tweeter:legacy": "nx dev tweeter-legacy",
-    "test": "nx test hello-vite"
+    "lolalemon:test": "nx test lolalemon-vite",
+    "tweeter:legacy": "nx dev tweeter-legacy"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.3",
