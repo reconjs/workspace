@@ -4,14 +4,14 @@ import "./index.css"
 import React, { Suspense, use } from 'react'
 import ReactDOM from 'react-dom/client'
 // import { App } from "./app"
-import { ReconProvider, use$ } from "recon"
-import { App, App$ } from "./app"
+import { use$ } from "recon"
+// import { Page$ } from "./count-page"
 
 const rootEl = document.getElementById('root')
 
 const fetchHeader = memoize (async () => {
   await timeout (1000)
-  return "Hello World"
+  return "Recon + Vite"
 })
 
 function Layout ({ children }: any) {
@@ -33,13 +33,21 @@ const loading = (
   </div>
 )
 
+function Page () {
+  return (
+    <div className="p-8 text-center">
+      Hello World!
+    </div>
+  )
+}
+
 function Root () {
-  const App = use$ (App$)
+  // const Page = use$ (Page$)
   
   return (
     <Suspense fallback={loading}>
       <Layout>
-        <App />
+        <Page />
       </Layout>
     </Suspense>
   )
@@ -47,8 +55,6 @@ function Root () {
 
 ReactDOM.createRoot (rootEl!).render(
   <React.StrictMode>
-    <ReconProvider>
-      <Root />
-    </ReconProvider>
+    <Root />
   </React.StrictMode>,
 )
