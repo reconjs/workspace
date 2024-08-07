@@ -26,7 +26,7 @@ type ReconHooks = {
 
 
 
-type ReactDispatcher = ReactHooks & Partial <ReconHooks>
+export type ReactDispatcher = ReactHooks & Partial <ReconHooks>
 
 export type ReconDispatcher = ReactHooks & ReconHooks & {
   <T>(factory: () => T): T

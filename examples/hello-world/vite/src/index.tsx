@@ -1,10 +1,10 @@
 import { memoize, timeout } from "@reconjs/utils"
 import "./index.css"
 
-import React, { Suspense, use } from 'react'
+import React, { Fragment, Suspense, use } from 'react'
 import ReactDOM from 'react-dom/client'
+import { Page } from "./faux-count-page"
 // import { App } from "./app"
-import { use$ } from "recon"
 // import { Page$ } from "./count-page"
 
 const rootEl = document.getElementById('root')
@@ -33,6 +33,7 @@ const loading = (
   </div>
 )
 
+/*
 function Page () {
   return (
     <div className="p-8 text-center">
@@ -40,9 +41,11 @@ function Page () {
     </div>
   )
 }
+*/
 
 function Root () {
   // const Page = use$ (Page$)
+  const Layout = Fragment
   
   return (
     <Suspense fallback={loading}>

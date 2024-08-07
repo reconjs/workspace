@@ -11,6 +11,8 @@
     "tweeter:legacy": "nx dev tweeter-legacy"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "*",
+    "@testing-library/react": "*",
     "@types/fs-extra": "^11.0.3",
     "@types/lodash": "^4.14.200",
     "@types/node": "^20.8.10",
@@ -19,9 +21,11 @@
     "@types/uuid": "^9.0.6",
     "eslint": "^8.52.0",
     "eslint-config-next": "latest",
+    "jsdom": "*",
     "next": "rc",
     "nx": "^17.0.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^2.0.4"
   },
   "overrides": {
     "@types/react": "npm:types-react@rc",
