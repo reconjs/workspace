@@ -4,20 +4,22 @@ import { Suspense } from "react"
 import { Regenerator, get$, use$ } from "recon"
 import { expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
+import { ErrorBoundary } from "@reconjs/utils-react"
 
 expect.extend (matchers)
 
-test.only ("Hello World (skip)", () => {
-  expect (true)
-})
+// test.only ("SKIP", () => { expect (true) })
 
 test ("Hello World", async () => {
   function* Greeting$ () {
+    console.log ("[Greeting$] start")
     return () => <h1>Hello World</h1>
   }
   
   function App () {
+    console.log ("[App] start")
     const Greeting = use$ (Greeting$)
+    console.log ("[App] after Greeting")
     return <Greeting />
   }
   
@@ -29,11 +31,14 @@ test ("Hello World", async () => {
 
 test ("Hello World (nested)", async () => {
   function* Greeting$ () {
+    console.log ("[Greeting$] start")
     return () => <span>Hello</span>
   }
   
   function* Headline$ () {
+    console.log ("[Headline$] start")
     const Greeting = use$ (Greeting$)
+    console.log ("[Headline$] after")
     return () => <h1><Greeting /> World</h1>
   }
   
@@ -42,7 +47,8 @@ test ("Hello World (nested)", async () => {
     return <Headline />
   }
   
-  render (<App />)
+  render(<App />)
+  
   expect (screen.getByRole ("heading"))
     // @ts-ignore
     .toHaveTextContent ("Hello World")

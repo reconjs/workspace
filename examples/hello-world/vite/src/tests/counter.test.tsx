@@ -8,6 +8,8 @@ import * as matchers from "@testing-library/jest-dom/matchers"
 
 expect.extend (matchers)
 
+test.only ("SKIP", () => { expect (true) })
+
 test ("Counter (local)", async () => {
   function* Counter$ () {
     return ({ label }: any) => {
