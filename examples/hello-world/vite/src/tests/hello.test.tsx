@@ -12,33 +12,26 @@ expect.extend (matchers)
 
 test ("Hello World", async () => {
   function* Greeting$ () {
-    console.log ("[Greeting$] start")
     return () => <h1>Hello World</h1>
   }
   
   function App () {
-    console.log ("[App] start")
     const Greeting = use$ (Greeting$)
-    console.log ("[App] after Greeting")
     return <Greeting />
   }
   
   render (<App />)
   expect (screen.getByRole ("heading"))
-    // @ts-ignore
     .toHaveTextContent ("Hello World")
 })
 
 test ("Hello World (nested)", async () => {
   function* Greeting$ () {
-    console.log ("[Greeting$] start")
     return () => <span>Hello</span>
   }
   
   function* Headline$ () {
-    console.log ("[Headline$] start")
     const Greeting = use$ (Greeting$)
-    console.log ("[Headline$] after")
     return () => <h1><Greeting /> World</h1>
   }
   
@@ -50,7 +43,6 @@ test ("Hello World (nested)", async () => {
   render(<App />)
   
   expect (screen.getByRole ("heading"))
-    // @ts-ignore
     .toHaveTextContent ("Hello World")
 })
 
@@ -71,7 +63,6 @@ test ("Hello World (w/ get$)", () => {
   
   render (<App />)
   expect (screen.getByRole ("heading"))
-    // @ts-ignore
     .toHaveTextContent ("Hello World")
 })
 
@@ -100,12 +91,10 @@ test ("Hello World (async)", async () => {
   
   render (<App />)
   expect (screen.getByRole ("heading"))
-    // @ts-ignore
     .toHaveTextContent ("Loading...")
   
   await waitFor(() => {
     expect (screen.getByRole ("heading"))
-      // @ts-ignore
       .toHaveTextContent ("Hello World")
   })
 })
