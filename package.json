@@ -8,6 +8,7 @@
     "lolalemon:next": "nx dev lolalemon-next",
     "lolalemon:vite": "nx dev lolalemon-vite",
     "lolalemon:test": "nx test lolalemon-vite",
+    "pokedex:next": "nx dev pokedex-next",
     "tweeter:legacy": "nx dev tweeter-legacy"
   },
   "devDependencies": {

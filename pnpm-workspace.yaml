@@ -3,6 +3,7 @@ packages:
   # Examples: The apps for the examples
   - 'examples/hello-world/*'
   - 'examples/lolalemon/*'
+  - 'examples/pokedex/*'
   - 'examples/tweeter/*'
 
   # Packages:
