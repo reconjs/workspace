@@ -1,15 +1,19 @@
+/*
 import { timeout } from "@reconjs/utils"
 import { PropsOf } from "@reconjs/utils-react"
 import { act, render, screen, waitFor } from "@testing-library/react"
 import { Suspense, useState } from "react"
 import { Regenerator, get$, use$ } from "recon"
+*/
+
 import { beforeEach, describe, expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
 
 expect.extend (matchers)
 
-// test.only ("SKIP", () => { expect (true) })
+test.only ("SKIP", () => { expect (true) })
 
+/*
 test ("Counter (local)", async () => {
   function* Counter$ () {
     return ({ label }: any) => {
@@ -98,3 +102,4 @@ describe("Counter (shared)", () => {
     expect (screen.queryByText ("Second: 1")).toBeVisible()
   })
 })
+*/

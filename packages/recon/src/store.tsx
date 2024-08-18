@@ -1,10 +1,13 @@
-import { Regenerator, Reiterator } from "./regenerator"
 import { Func, Vunc } from "@reconjs/utils"
-import { Prac, Returns } from "./types"
-import { AsyncGeneratorFunction } from "./old"
+import { AsyncGeneratorFunction, Prac, Returns } from "./types"
+import { Effect } from "./effect"
 
-type Reproc = (...args: any[]) => Generator <Regenerator, any>
-type Reprac = (...args: any[]) => AsyncGenerator <Regenerator, any>
+type Reproc = (...args: any[]) => Generator <Effect, any>
+type Reprac = (...args: any[]) => AsyncGenerator <Effect, any>
+
+function doo <T> (func: Func <T>) {
+  return func ()
+}
 
 function* loop (debug: string) {
   for (let i = 0; i < 10; i++) {
@@ -14,65 +17,36 @@ function* loop (debug: string) {
   throw new Error (`[loop] too much (${debug})`)
 }
 
-
-
-export class Effect <T = any> extends Regenerator <T> {
-  constructor () {
-    super()
-    const _this = this
-    this.yield (function* () {
-      yield _this // only yields itself once!
-      throw new Error ("[Effect] must be handled eagerly")
-    })
-  }
-}
+const NEVER = doo(() => {
+  const res = new Effect()
+  res.throw (new Error("[NEVER] should never be called"))
+  return res
+})
 
 
 
-export class AsyncEffect <T = any> extends Effect <T> {
-  constructor (public effect: Effect <T>) {
-    super()
-    this.yield (function* () {
-      throw new Error ("[AsyncEffect] must be handled asynchronously")
-    })
-  }
-}
-
-
-
-export function flux$ <T> (
+export function defineStore <T> (
   initialState: T,
   reducer: (state: T, effect: Effect) => T,
 ) {
   let state = { ...initialState }
   
-  function defineAsync (prac: Reprac) {
+  function defineAsyncAction (prac: Reprac) {
     return async function call$ (...args: any[]) {
       const iter = prac (...args)
       
-      for (const _ of loop ("flux$::async")) {
+      let prev = NEVER
+      
+      for (const _ of loop ("defineAsyncAction")) {
         const { done, value } = await iter.next()
         if (done) return value
+        
         if (! (value instanceof Effect)) {
-          throw new Error ("[flux$::async] only accepts Effects")
+          throw new Error ("[defineAsyncAction] only accepts Effects")
         }
         
-        const nextState = reducer (state, new AsyncEffect (value))
-        if (!nextState) throw new Error ("No next state")
-        state = { ...nextState }
-      }
-    }
-  }
-  
-  function defineSync (proc: Reproc) {
-    return function call$ (...args: any[]) {
-      const iter = proc (...args)
-      
-      for (const _ of loop ("flux$::sync")) {
-        const { done, value } = iter.next()
-        if (done) return value
-        if (! (value instanceof Effect)) {
-          throw new Error ("[flux$::sync] only accepts Effects")
+        if (prev === value) {
+          throw new Error ("[defineASyncAction] should not return the same effect")
         }
         
         const nextState = reducer (state, value)
@@ -82,15 +56,40 @@ export function flux$ <T> (
     }
   }
   
-  return function define$ <T extends Reprac|Reproc> (proc: T) {
+  function defineSyncAction (proc: Reproc) {
+    return function call (...args: any[]) {
+      const iter = proc (...args)
+      
+      let prev = NEVER
+      
+      for (const _ of loop ("defineSyncAction")) {
+        const { done, value } = iter.next()
+        if (done) return value
+        
+        if (! (value instanceof Effect)) {
+          throw new Error ("[defineSyncAction] only accepts Effects")
+        }
+        
+        if (prev === value) {
+          throw new Error ("[defineSyncAction] should not return the same effect")
+        }
+        
+        const nextState = reducer (state, value)
+        if (!nextState) throw new Error ("No next state")
+        state = { ...nextState }
+      }
+    }
+  }
+  
+  return function defineAction <T extends Reprac|Reproc> (proc: T) {
     type P = Parameters <T>
     type R = T extends Prac 
       ? Promise <Returns <T>> 
       : Returns <T>
     
     const res: any = proc instanceof AsyncGeneratorFunction
-      ? defineAsync (proc as any)
-      : defineSync (proc as any)
+      ? defineAsyncAction (proc as any)
+      : defineSyncAction (proc as any)
     
     return res as (...args: P) => R
   }

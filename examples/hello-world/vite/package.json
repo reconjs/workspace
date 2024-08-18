@@ -13,8 +13,8 @@
   "dependencies": {
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-react": "workspace:*",
-    "react": "beta",
-    "react-dom": "beta",
+    "react": "rc",
+    "react-dom": "rc",
     "recon": "workspace:*"
   },
   "devDependencies": {

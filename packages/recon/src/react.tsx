@@ -1,6 +1,7 @@
 import { Func, Vunc } from "@reconjs/utils"
 import React, { useRef } from "react"
 import { AnyGenerator, Proc, Proc0 } from "./types"
+import { Atom } from "./atomic"
 
 function doo <T> (func: () => T) {
   return func()
@@ -22,6 +23,7 @@ type ReconHooks = {
   get$: (resource: Func, ...params: any[]) => any,
   use$: (resource: Func, ...params: any[]) => any,
   _use: (func: Func) => any,
+  useAtomic: (func: Func, ...args: any[]) => Atom <any>,
 }
 
 

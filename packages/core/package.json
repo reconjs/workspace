@@ -12,7 +12,7 @@
     "@reconjs/internals": "workspace:*",
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-server": "workspace:*",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "rc",
+    "react-dom": "rc"
   }
 }

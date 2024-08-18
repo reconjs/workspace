@@ -176,11 +176,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/utils-react
       react:
-        specifier: beta
-        version: 19.0.0-beta-26f2496093-20240514
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816
       react-dom:
-        specifier: beta
-        version: 19.0.0-beta-26f2496093-20240514(react@19.0.0-beta-26f2496093-20240514)
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
       recon:
         specifier: workspace:*
         version: link:../../../packages/recon
@@ -190,7 +190,7 @@ importers:
         version: 6.4.6(vitest@2.0.4(@types/node@20.8.10)(jsdom@24.1.1))
       '@testing-library/react':
         specifier: '*'
-        version: 16.0.0(@testing-library/dom@10.4.0)(@types/react@18.3.2)(react-dom@19.0.0-beta-26f2496093-20240514(react@19.0.0-beta-26f2496093-20240514))(react@19.0.0-beta-26f2496093-20240514)(types-react-dom@19.0.0-rc.1)
+        version: 16.0.0(@testing-library/dom@10.4.0)(@types/react@18.3.2)(react-dom@19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816))(react@19.0.0-rc-1eaccd82-20240816)(types-react-dom@19.0.0-rc.1)
       '@vitejs/plugin-react':
         specifier: ^4.2.1
         version: 4.2.1(vite@5.2.11(@types/node@20.8.10))
@@ -427,11 +427,11 @@ importers:
         specifier: workspace:*
         version: link:../utils-server
       react:
-        specifier: ^18.2.0
-        version: 18.2.0
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816
       react-dom:
-        specifier: ^18.2.0
-        version: 18.2.0(react@18.2.0)
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
 
   packages/internals:
     dependencies:
@@ -460,11 +460,11 @@ importers:
         specifier: workspace:*
         version: link:../utils-server
       react:
-        specifier: ^18.2.0
-        version: 18.2.0
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816
       react-dom:
-        specifier: ^18.2.0
-        version: 18.2.0(react@18.2.0)
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
 
   packages/react:
     dependencies:
@@ -484,11 +484,11 @@ importers:
         specifier: workspace:*
         version: link:../utils-server
       react:
-        specifier: '*'
-        version: 18.3.1
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816
       react-dom:
-        specifier: '*'
-        version: 18.3.1(react@18.3.1)
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
 
   packages/recon:
     dependencies:
@@ -502,11 +502,11 @@ importers:
         specifier: ^3.5.0
         version: 3.5.6
       react:
-        specifier: '*'
-        version: 18.3.1
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816
       react-dom:
-        specifier: '*'
-        version: 18.3.1(react@18.3.1)
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
 
   packages/utils:
     dependencies:
@@ -531,19 +531,19 @@ importers:
     dependencies:
       '@headlessui/react':
         specifier: ^1.7.15
-        version: 1.7.17(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.7.17(react-dom@19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816))(react@19.0.0-rc-1eaccd82-20240816)
       '@heroicons/react':
         specifier: ^2.0.18
-        version: 2.0.18(react@18.3.1)
+        version: 2.0.18(react@19.0.0-rc-1eaccd82-20240816)
       '@reconjs/utils':
         specifier: workspace:*
         version: link:../utils
       react:
-        specifier: '*'
-        version: 18.3.1
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816
       react-dom:
-        specifier: '*'
-        version: 18.3.1(react@18.3.1)
+        specifier: rc
+        version: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
 
   packages/utils-server:
     dependencies:
@@ -2844,25 +2844,20 @@ packages:
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
-  react-dom@18.2.0:
-    resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
-    peerDependencies:
-      react: ^18.2.0
-
   react-dom@18.3.1:
     resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
     peerDependencies:
       react: ^18.3.1
 
-  react-dom@19.0.0-beta-26f2496093-20240514:
-    resolution: {integrity: sha512-UvQ+K1l3DFQ34LDgfFSNuUGi9EC+yfE9tS6MdpNTd5fx7qC7KLfepfC/KpxWMQZ7JfE3axD4ZO6H4cBSpAZpqw==}
-    peerDependencies:
-      react: 19.0.0-beta-26f2496093-20240514
-
   react-dom@19.0.0-rc-19bd26be-20240815:
     resolution: {integrity: sha512-UG8iYnr1NVxPcIG9iIcGuxfV3fy2Jr9fdWRZu24fUHl4BBigGqYbjW6P3hAK1yR9GRGJ8FHn+ke+Xt6gp0VufA==}
     peerDependencies:
       react: 19.0.0-rc-19bd26be-20240815
+
+  react-dom@19.0.0-rc-1eaccd82-20240816:
+    resolution: {integrity: sha512-8HXIHjY9tQUU4Hf5e/QNwVbNLXO+QJkjyCentxKNNc2vn/UjWc5lL782ZTkqII7xBzA/DhC6UdJi83Vr24cDIQ==}
+    peerDependencies:
+      react: 19.0.0-rc-1eaccd82-20240816
 
   react-dom@19.0.0-rc-d025ddd3-20240722:
     resolution: {integrity: sha512-8/iAF8F5U5kkPg+UzDXcLUq/QKWN9ZDZy8GA8IuzIhW0AagEeZCWJQVl0uYLwZBqHFVQt+DQJ3oFwcjgELjykw==}
@@ -2882,20 +2877,16 @@ packages:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
     engines: {node: '>=0.10.0'}
 
-  react@18.2.0:
-    resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
-    engines: {node: '>=0.10.0'}
-
   react@18.3.1:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
     engines: {node: '>=0.10.0'}
 
-  react@19.0.0-beta-26f2496093-20240514:
-    resolution: {integrity: sha512-ZsU/WjNZ6GfzMWsq2DcGjElpV9it8JmETHm9mAJuOJNhuJcWJxt8ltCJabONFRpDFq1A/DP0d0KFj9CTJVM4VA==}
-    engines: {node: '>=0.10.0'}
-
   react@19.0.0-rc-19bd26be-20240815:
     resolution: {integrity: sha512-LfNxIja6aj9OCTmbVh6QUwy9lMVt2lp/S0erap/gdh1PvHpaYGMddyXoIOR/D2scvKachosW+tbxThXfUmBCPw==}
+    engines: {node: '>=0.10.0'}
+
+  react@19.0.0-rc-1eaccd82-20240816:
+    resolution: {integrity: sha512-jQ/NAywTe/dTHMYcNTR9FvPShpX2e8QrRb2xWBrE/dNqMzbmFynghdMNFlekbBx4PNKdWByVgR7MEakhAfV5rQ==}
     engines: {node: '>=0.10.0'}
 
   react@19.0.0-rc-d025ddd3-20240722:
@@ -2993,17 +2984,14 @@ packages:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
 
-  scheduler@0.23.0:
-    resolution: {integrity: sha512-CtuThmgHNg7zIZWAXi3AsyIzA3n4xx7aNyjwC2VJldO2LMVDhFK+63xGqq6CsJH4rTAt6/M+N4GhZiDYPx9eUw==}
-
   scheduler@0.23.2:
     resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
 
-  scheduler@0.25.0-beta-26f2496093-20240514:
-    resolution: {integrity: sha512-vDwOytLHFnA3SW2B1lNcbO+/qKVyLCX+KLpm+tRGNDsXpyxzRgkIaYGWmX+S70AJGchUHCtuqQ50GFeFgDbXUw==}
-
   scheduler@0.25.0-rc-19bd26be-20240815:
     resolution: {integrity: sha512-suxU1KqTo/cpFIAKSkrfwPxSnq8rqRCZHl2OZQL+pfX1PYXFRE2udEqjPqTrFLxP3bzzsgIprrxKhdcpSL5TSA==}
+
+  scheduler@0.25.0-rc-1eaccd82-20240816:
+    resolution: {integrity: sha512-R2SIZf9OVNrl+X31RejZK+25c9dFBS5GqCLOkID1MCMI2WQbaLsrbQKcO6Dz6+7+NEUx8rXT6FjmjuXplTWamg==}
 
   scheduler@0.25.0-rc-d025ddd3-20240722:
     resolution: {integrity: sha512-W+CjyTUXoOf/l6b2C9uWAFA696ib1s40vKoLnVQ7o34Cgi9t18mJ7ak4AiVsKBy4pibxZAlmAZJvlKr2ra2p0w==}
@@ -3758,6 +3746,12 @@ snapshots:
       react: 19.0.0-rc-19bd26be-20240815
       react-dom: 19.0.0-rc-19bd26be-20240815(react@19.0.0-rc-19bd26be-20240815)
 
+  '@headlessui/react@1.7.17(react-dom@19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816))(react@19.0.0-rc-1eaccd82-20240816)':
+    dependencies:
+      client-only: 0.0.1
+      react: 19.0.0-rc-1eaccd82-20240816
+      react-dom: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
+
   '@headlessui/react@1.7.17(react-dom@19.0.0-rc-d025ddd3-20240722(react@19.0.0-rc-d025ddd3-20240722))(react@19.0.0-rc-d025ddd3-20240722)':
     dependencies:
       client-only: 0.0.1
@@ -3771,6 +3765,10 @@ snapshots:
   '@heroicons/react@2.0.18(react@19.0.0-rc-19bd26be-20240815)':
     dependencies:
       react: 19.0.0-rc-19bd26be-20240815
+
+  '@heroicons/react@2.0.18(react@19.0.0-rc-1eaccd82-20240816)':
+    dependencies:
+      react: 19.0.0-rc-1eaccd82-20240816
 
   '@heroicons/react@2.0.18(react@19.0.0-rc-d025ddd3-20240722)':
     dependencies:
@@ -4093,12 +4091,12 @@ snapshots:
     optionalDependencies:
       vitest: 2.0.4(@types/node@20.8.10)(jsdom@24.1.1)
 
-  '@testing-library/react@16.0.0(@testing-library/dom@10.4.0)(@types/react@18.3.2)(react-dom@19.0.0-beta-26f2496093-20240514(react@19.0.0-beta-26f2496093-20240514))(react@19.0.0-beta-26f2496093-20240514)(types-react-dom@19.0.0-rc.1)':
+  '@testing-library/react@16.0.0(@testing-library/dom@10.4.0)(@types/react@18.3.2)(react-dom@19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816))(react@19.0.0-rc-1eaccd82-20240816)(types-react-dom@19.0.0-rc.1)':
     dependencies:
       '@babel/runtime': 7.23.2
       '@testing-library/dom': 10.4.0
-      react: 19.0.0-beta-26f2496093-20240514
-      react-dom: 19.0.0-beta-26f2496093-20240514(react@19.0.0-beta-26f2496093-20240514)
+      react: 19.0.0-rc-1eaccd82-20240816
+      react-dom: 19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816)
     optionalDependencies:
       '@types/react': 18.3.2
       '@types/react-dom': types-react-dom@19.0.0-rc.1
@@ -5913,27 +5911,21 @@ snapshots:
 
   queue-microtask@1.2.3: {}
 
-  react-dom@18.2.0(react@18.2.0):
-    dependencies:
-      loose-envify: 1.4.0
-      react: 18.2.0
-      scheduler: 0.23.0
-
   react-dom@18.3.1(react@18.3.1):
     dependencies:
       loose-envify: 1.4.0
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-dom@19.0.0-beta-26f2496093-20240514(react@19.0.0-beta-26f2496093-20240514):
-    dependencies:
-      react: 19.0.0-beta-26f2496093-20240514
-      scheduler: 0.25.0-beta-26f2496093-20240514
-
   react-dom@19.0.0-rc-19bd26be-20240815(react@19.0.0-rc-19bd26be-20240815):
     dependencies:
       react: 19.0.0-rc-19bd26be-20240815
       scheduler: 0.25.0-rc-19bd26be-20240815
+
+  react-dom@19.0.0-rc-1eaccd82-20240816(react@19.0.0-rc-1eaccd82-20240816):
+    dependencies:
+      react: 19.0.0-rc-1eaccd82-20240816
+      scheduler: 0.25.0-rc-1eaccd82-20240816
 
   react-dom@19.0.0-rc-d025ddd3-20240722(react@19.0.0-rc-d025ddd3-20240722):
     dependencies:
@@ -5948,17 +5940,13 @@ snapshots:
 
   react-refresh@0.14.2: {}
 
-  react@18.2.0:
-    dependencies:
-      loose-envify: 1.4.0
-
   react@18.3.1:
     dependencies:
       loose-envify: 1.4.0
 
-  react@19.0.0-beta-26f2496093-20240514: {}
-
   react@19.0.0-rc-19bd26be-20240815: {}
+
+  react@19.0.0-rc-1eaccd82-20240816: {}
 
   react@19.0.0-rc-d025ddd3-20240722: {}
 
@@ -6080,17 +6068,13 @@ snapshots:
     dependencies:
       xmlchars: 2.2.0
 
-  scheduler@0.23.0:
-    dependencies:
-      loose-envify: 1.4.0
-
   scheduler@0.23.2:
     dependencies:
       loose-envify: 1.4.0
 
-  scheduler@0.25.0-beta-26f2496093-20240514: {}
-
   scheduler@0.25.0-rc-19bd26be-20240815: {}
+
+  scheduler@0.25.0-rc-1eaccd82-20240816: {}
 
   scheduler@0.25.0-rc-d025ddd3-20240722: {}
 

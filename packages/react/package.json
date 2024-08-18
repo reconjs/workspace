@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@reconjs/core": "workspace:*",
-    "react": "*",
-    "react-dom": "*"
+    "react": "rc",
+    "react-dom": "rc"
   }
 }
