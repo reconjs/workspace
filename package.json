@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "dev": "pnpm hello:vite",
     "hello:legacy": "nx dev hello-legacy",
     "hello:next": "nx dev hello-next",
     "hello:vite": "nx dev hello-vite",
