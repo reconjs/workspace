@@ -5,7 +5,7 @@ import {
   getDefinitionRef,
   setServerPreloader,
   usingSerializedNode,
-} from "@reconjs/recon"
+} from "@reconjs/internals"
 import {
   Fanc,
   Serial,

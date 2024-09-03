@@ -10,12 +10,12 @@
   },
   "dependencies": {
     "@reconjs/core": "workspace:*",
-    "@reconjs/recon": "workspace:*",
+    "@reconjs/internals": "workspace:*",
     "@reconjs/react": "workspace:*",
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-react": "workspace:*",
     "@reconjs/utils-server": "workspace:*",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "rc",
+    "react-dom": "rc"
   }
 }

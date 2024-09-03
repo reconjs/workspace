@@ -1,27 +1,36 @@
 {
   "private": true,
   "scripts": {
-    "dev": "nx dev hello-world",
-    "hello-again": "nx dev hello-again",
-    "hello-vite": "nx dev hello-vite",
-    "lolalemon": "nx dev lolalemon",
-    "tweeter": "nx dev tweeter"
+    "dev": "pnpm hello:vite",
+    "hello:legacy": "nx dev hello-legacy",
+    "hello:next": "nx dev hello-next",
+    "hello:vite": "nx dev hello-vite",
+    "hello:test": "nx test hello-vite",
+    "lolalemon:next": "nx dev lolalemon-next",
+    "lolalemon:vite": "nx dev lolalemon-vite",
+    "lolalemon:test": "nx test lolalemon-vite",
+    "pokedex:next": "nx dev pokedex-next",
+    "tweeter:legacy": "nx dev tweeter-legacy"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "*",
+    "@testing-library/react": "*",
     "@types/fs-extra": "^11.0.3",
     "@types/lodash": "^4.14.200",
     "@types/node": "^20.8.10",
-    "@types/react": "npm:types-react@beta",
-    "@types/react-dom": "npm:types-react-dom@beta",
+    "@types/react": "npm:types-react@rc",
+    "@types/react-dom": "npm:types-react-dom@rc",
     "@types/uuid": "^9.0.6",
     "eslint": "^8.52.0",
     "eslint-config-next": "latest",
-    "next": "^14.0.3",
+    "jsdom": "*",
+    "next": "rc",
     "nx": "^17.0.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^2.0.4"
   },
   "overrides": {
-    "@types/react": "npm:types-react@beta",
-    "@types/react-dom": "npm:types-react-dom@beta"
+    "@types/react": "npm:types-react@rc",
+    "@types/react-dom": "npm:types-react-dom@rc"
   }
 }

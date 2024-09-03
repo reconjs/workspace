@@ -8,14 +8,14 @@
     "./types": "./src/types.ts"
   },
   "dependencies": {
-    "@reconjs/recon": "workspace:*",
+    "@reconjs/internals": "workspace:*",
     "@reconjs/utils": "workspace:*",
     "@reconjs/utils-react": "workspace:*",
     "@reconjs/utils-server": "workspace:*"
   },
   "peerDependencies": {
     "@reconjs/core": "workspace:*",
-    "react": "*",
-    "react-dom": "*"
+    "react": "rc",
+    "react-dom": "rc"
   }
 }
