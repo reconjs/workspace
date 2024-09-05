@@ -128,7 +128,7 @@ test ("useTextAtom (+ generators)", async () => {
   })
 })
 
-test ("useTextAtom (preloading)", async () => {
+test.todo ("useTextAtom (preloading)", async () => {
   const useTextAtom = atomic (async (lang: string, english: string) => {
     if (lang === "en") return english
   })

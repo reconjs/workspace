@@ -1,7 +1,7 @@
 import { Func } from "@reconjs/utils"
 import React, { FunctionComponent, memo, Usable } from "react"
 import { CallEffect, Effect } from "../effect"
-import { ReactDispatcher } from "../hooks"
+import { ReactDispatcher, REDISPATCHER } from "../hooks"
 import { defineStore } from "./store"
 import { AsyncGeneratorFunction, GeneratorFunction, Prac, Proc, Returns } from "../types"
 import { AnyView, View } from "../use-view"
@@ -32,8 +32,6 @@ if (!internals) {
   throw new Error ("INTERNALS NOT FOUND")
 }
 
-
-
 const Dispatcher = {
   get current (): ReactDispatcher|null {
     return internals.H
@@ -41,23 +39,6 @@ const Dispatcher = {
   set current (dispatcher: ReactDispatcher|null) {
     internals.H = dispatcher
   }
-}
-
-
-
-// ATOM
-
-const UNCONTEXT = memo (() => null)
-const UNRENDERED = memo (() => null)
-
-/**
-* Atomic hooks will attempt to resolve synchronously
-*  - If it works and returns atom then $$typeof will be CONTEXT_TYPE
-*    - If we don't do this then we would suspend on resolvable atoms
-*  - Otherwise it will return a promise and $$typeof will be Symbol.for ("react.memo")
-*/
-type Atom<T> = Usable<T> & {
-  [Symbol.iterator]: () => Iterator <Effect, T>,
 }
 
 
@@ -102,75 +83,17 @@ type ReconDataState = {
   promise?: Promise <any>,
 }
 
-// #region InlineView
-
-type InviewInfo = {
-  render: FunctionComponent <any>,
-  component: AnyView,
+type ReconInviewState = {
+  dispatcher: ReactDispatcher,
 }
-
-export class InviewUsing extends Effect <void> {
-  constructor (public props: {
-    id: string,
-    render: FunctionComponent <any>,
-  }) {
-    super ()
-  }
-}
-
-export class InviewRendering extends Effect <FunctionComponent <any>> {
-  constructor (public id: string) {
-    super ()
-  }
-}
-
-export class InviewRendered extends Effect <void> {}
-
-function reduceInviewUsing (state: ReconState["inviews"], ) {
-
-}
-
-export function reduceInlineViewCalling (
-  state: ReconState,
-  effect: InlineViewCalling,
-) {
-  const { viewId, render } = effect.props
-
-  if (state.
-
-  const view = render as AnyView
-  return {
-    ...state,
-    inlineViews: [
-      ...state.inlineViews,
-      {
-        id: viewId,
-        render,
-        view,
-      }
-    ]
-  }
-}
-
-export class InlineViewStarting extends Effect <void> {
-  constructor (public viewId: string) {
-    super ()
-  }
-}
-
-export class InlineViewEnding extends Effect <void> {}
-
-
-
-// #endregion
 
 export type ReconState = {
   entrypoints: ReconEntrypoint[],
   errors: any[],
   renders: ReconRendered[],
   data: ReconDataState[],
-  inviews: Record <string, InviewInfo>,
   prerendering?: ReconPrerenderingState,
+  inview?: ReconInviewState,
 }
 
 const INIT: ReconState = {
@@ -178,12 +101,14 @@ const INIT: ReconState = {
   errors: [],
   renders: [],
   data: [],
-  inviews: {},
 }
 
 
 
 // STORE DEFINITION
+
+export class InviewStartTask extends Effect <void> {}
+export class InviewEndTask extends Effect <void> {}
 
 export class PrerenderTask extends Effect <void> {
   constructor (public props: {
@@ -224,7 +149,38 @@ export class SetDataTask extends Effect <void> {
   }
 }
 
+
+
 export const extendStore = defineStore (INIT, (state, effect): ReconState => {
+  if (effect instanceof InviewEndTask) {
+    const { inview, ..._state } = state
+    if (!inview) throw new Error ("[InviewEndTask] No inview")
+    Dispatcher.current = inview.dispatcher
+    return _state
+  }
+  else if (state.inview) {
+    throw new Error ("[extendStore] inview and effect")
+  }
+  
+  if (effect instanceof InviewStartTask) {
+    if (state.inview) throw new Error ("[InviewStartTask] inview")
+    if (state.prerendering) throw new Error ("[InviewStartTask] prerendering")
+
+    const dispatcher = Dispatcher.current
+    if (!dispatcher) {
+      throw new Error ("[InviewStartTask] No dispatcher")
+    }
+
+    return {
+      ...state,
+      inview: {
+        dispatcher
+      },
+    }
+  }
+
+  
+  
   if (effect instanceof DispatcherTask) {
     const { prerendering } = state
     if (!prerendering) {
