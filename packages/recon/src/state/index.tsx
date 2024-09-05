@@ -1,9 +1,10 @@
 import { Func } from "@reconjs/utils"
-import { ExoticComponent, memo, Usable } from "react"
-import { CallEffect, Effect } from "./effect"
-import { ReactDispatcher } from "./react"
+import React, { FunctionComponent, memo, Usable } from "react"
+import { CallEffect, Effect } from "../effect"
+import { ReactDispatcher } from "../hooks"
 import { defineStore } from "./store"
-import { AsyncGeneratorFunction, GeneratorFunction, Prac, Proc, Returns } from "./types"
+import { AsyncGeneratorFunction, GeneratorFunction, Prac, Proc, Returns } from "../types"
+import { AnyView, View } from "../use-view"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -19,6 +20,27 @@ function* loop (debug: string) {
   }
   
   throw new Error (`[loop] too much (${debug})`)
+}
+
+
+// REACT INTERNALS
+
+// @ts-ignore
+const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+if (!internals) {
+  // console.log (Object.keys (React))
+  throw new Error ("INTERNALS NOT FOUND")
+}
+
+
+
+const Dispatcher = {
+  get current (): ReactDispatcher|null {
+    return internals.H
+  },
+  set current (dispatcher: ReactDispatcher|null) {
+    internals.H = dispatcher
+  }
 }
 
 
@@ -80,11 +102,74 @@ type ReconDataState = {
   promise?: Promise <any>,
 }
 
-type ReconState = {
+// #region InlineView
+
+type InviewInfo = {
+  render: FunctionComponent <any>,
+  component: AnyView,
+}
+
+export class InviewUsing extends Effect <void> {
+  constructor (public props: {
+    id: string,
+    render: FunctionComponent <any>,
+  }) {
+    super ()
+  }
+}
+
+export class InviewRendering extends Effect <FunctionComponent <any>> {
+  constructor (public id: string) {
+    super ()
+  }
+}
+
+export class InviewRendered extends Effect <void> {}
+
+function reduceInviewUsing (state: ReconState["inviews"], ) {
+
+}
+
+export function reduceInlineViewCalling (
+  state: ReconState,
+  effect: InlineViewCalling,
+) {
+  const { viewId, render } = effect.props
+
+  if (state.
+
+  const view = render as AnyView
+  return {
+    ...state,
+    inlineViews: [
+      ...state.inlineViews,
+      {
+        id: viewId,
+        render,
+        view,
+      }
+    ]
+  }
+}
+
+export class InlineViewStarting extends Effect <void> {
+  constructor (public viewId: string) {
+    super ()
+  }
+}
+
+export class InlineViewEnding extends Effect <void> {}
+
+
+
+// #endregion
+
+export type ReconState = {
   entrypoints: ReconEntrypoint[],
   errors: any[],
   renders: ReconRendered[],
   data: ReconDataState[],
+  inviews: Record <string, InviewInfo>,
   prerendering?: ReconPrerenderingState,
 }
 
@@ -92,7 +177,8 @@ const INIT: ReconState = {
   entrypoints: [],
   errors: [],
   renders: [],
-  data: []
+  data: [],
+  inviews: {},
 }
 
 
@@ -110,8 +196,6 @@ export class PrerenderTask extends Effect <void> {
     super ()
   }
 }
-
-export class DispatcherTask extends Effect <ReactDispatcher> {}
 
 export class PrerenderedTask extends Effect <void> {
   constructor (public viewId: string) {
@@ -238,21 +322,15 @@ export const extendStore = defineStore (INIT, (state, effect): ReconState => {
   throw new Error ("[defineStore] Unknown task")
 })
 
-/**
- * Yield side effects that don't return.
- *
-export const handleSide = extendStore (function* (effect) {
-  try {
-    const res = yield* effect
-    if (res) {
-      throw new Error ("[handleSideEffect] Unexpected return value")
-    }
-  }
-  catch (error) {
-    console.error (error)
-  }
+class DispatcherTask extends Effect <ReactDispatcher> {}
+
+export const handleDispatcher = extendStore (function* () {
+  return yield* new DispatcherTask()
 })
-*/
+
+
+
+// #region handleCall & handleAsync
 
 /**
 * Helper for initializing atoms in the store... 
@@ -320,8 +398,6 @@ const handleAsync = extendStore (async function* (func: Prac, ...args: any[]) {
   }
 })
 
-
-
 /**
  * Catch all for loading data synchronously
  */
@@ -366,8 +442,10 @@ export const handleCall = extendStore (function* (effect: CallEffect) {
   }
 })
 
+// #endregion
+
 /**
- * Catch all for unhandled side effects...
+ * Catch-all for unhandled side effects...
  */
 export const handleEffect = extendStore (function* (effect: Effect) {
   if (effect instanceof CallEffect) {

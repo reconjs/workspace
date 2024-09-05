@@ -1,6 +1,6 @@
 import { Func, Vunc } from "@reconjs/utils"
-import { AsyncGeneratorFunction, Prac, Returns } from "./types"
-import { Effect } from "./effect"
+import { AsyncGeneratorFunction, Prac, Returns } from "../types"
+import { Effect } from "../effect"
 
 type Reproc = (...args: any[]) => Generator <Effect, any>
 type Reprac = (...args: any[]) => AsyncGenerator <Effect, any>

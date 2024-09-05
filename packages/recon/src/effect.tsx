@@ -1,5 +1,6 @@
 import { Func, Func0 } from "@reconjs/utils"
 import { AnyGenerator, Proc } from "./types"
+import { Atom } from "./atomic"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -160,7 +161,7 @@ export class Effect <T = any> {
 
 
 
-export class CallEffect <T = any> extends Effect <T> {
+export class CallEffect extends Effect <Atom <any>> {
   constructor (
     public scope: symbol,
     public func: Func,
