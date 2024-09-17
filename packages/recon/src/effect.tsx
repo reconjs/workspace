@@ -82,6 +82,7 @@ export class Effect <T = any> {
     return this.#async.promise
   }
   
+  /*
   get then () {
     return this.promise.then
   }
@@ -93,6 +94,7 @@ export class Effect <T = any> {
   get finally () {
     return this.promise.finally
   }
+  */
   
   #iterator: Regenerator <void> = doo (() => {
     const _this = this

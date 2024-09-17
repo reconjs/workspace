@@ -1,8 +1,8 @@
 import { ComponentProps, ComponentType, FunctionComponent, MemoExoticComponent, useId } from "react"
-import { Dispatcher } from "./react"
+import { Dispatcher } from "./state"
 import { PropsOf } from "@reconjs/utils-react"
 import { memoize } from "@reconjs/utils"
-import { extendStore, InviewEndTask, InviewStartTask } from "./state"
+import { extendStore, InviewEndEffect, InviewStartEffect } from "./state"
 
 const ERR1 = "useView must be called inside a Recon or React component"
 
@@ -23,13 +23,13 @@ const renderById = memoize ((_: string) => ({
 }))
 
 const handleRender = extendStore (function* (render: () => any) {
-  yield new InviewStartTask()
+  yield new InviewStartEffect()
 
   try {
     return render ()
   }
   finally {
-    yield new InviewEndTask()
+    yield new InviewEndEffect()
   }
 })
 

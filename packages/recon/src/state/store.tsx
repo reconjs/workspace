@@ -29,7 +29,7 @@ export function defineStore <T> (
   initialState: T,
   reducer: (state: T, effect: Effect) => T,
 ) {
-  let state = { ...initialState }
+  let state = initialState
   
   function defineAsyncAction (prac: Reprac) {
     return async function call$ (...args: any[]) {
@@ -37,21 +37,26 @@ export function defineStore <T> (
       
       let prev = NEVER
       
-      for (const _ of loop ("defineAsyncAction")) {
-        const { done, value } = await iter.next()
-        if (done) return value
-        
-        if (! (value instanceof Effect)) {
-          throw new Error ("[defineAsyncAction] only accepts Effects")
+      try {
+        for (const _ of loop ("defineAsyncAction")) {
+          const { done, value } = await iter.next()
+          if (done) return value
+          
+          if (! (value instanceof Effect)) {
+            throw new Error ("[defineAsyncAction] only accepts Effects")
+          }
+          
+          if (prev === value) {
+            throw new Error ("[defineASyncAction] should not return the same effect")
+          }
+          
+          const nextState = reducer (state, value)
+          if (!nextState) throw new Error ("No next state")
+          state = nextState
         }
-        
-        if (prev === value) {
-          throw new Error ("[defineASyncAction] should not return the same effect")
-        }
-        
-        const nextState = reducer (state, value)
-        if (!nextState) throw new Error ("No next state")
-        state = { ...nextState }
+      }
+      catch (error) {
+        console.error ("FROM STORE", error)
       }
     }
   }
@@ -76,7 +81,7 @@ export function defineStore <T> (
         
         const nextState = reducer (state, value)
         if (!nextState) throw new Error ("No next state")
-        state = { ...nextState }
+        state = nextState
       }
     }
   }

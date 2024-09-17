@@ -6,10 +6,11 @@ import {
   useId, 
   use,
   MemoExoticComponent,
+  useEffect,
 } from "react"
 import { CallEffect, Effect, remit } from "./effect"
-import { _use, Dispatcher } from "./react"
-import { extendStore, handleCall, handleEffect } from "./state"
+import { _use, Dispatcher } from "./state"
+import { performEntrypoint } from "./state"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -55,6 +56,12 @@ const ReconContext = createContext <symbol> (ROOT)
 
 
 // ATOMIC API
+
+/*
+
+function handleCall (x) {
+  // noop
+}
 
 const resolveAtom = extendStore (function* (scope, func, ...args) {
   let callEffect = function* () {
@@ -198,9 +205,10 @@ const createAtom = extendStore (function* (
     }
   }
 
-  yield new CallEffect (scope, func, args)
+  // yield new CallEffect (scope, func, args)
   return atom as Atom <any>
 })
+*/
 
 
 
@@ -213,9 +221,25 @@ export function useAtomic <T extends Func> (
   if (dispatcher.useAtomic) return dispatcher.useAtomic (hook, ...args)
   
   const id = useId() // eslint-disable-line
+
+  // eslint-disable-next-line
+  useEffect (() => {
+
+  }, [])
+
+  /* TODO: Sync lifecycles with Recon.
+  useLayoutEffect (() => {
+
+  }, [])
+
+  useInsertionEffect (() => {
+
+  }, [])
+  */
+
+  
   const scope = use (ReconContext) // eslint-disable-line
-  const atom = createAtom (scope, id, hook, ...args)
-  return atom
+  return performEntrypoint (id, scope, hook, ...args)
 }
 
 
@@ -228,7 +252,7 @@ export function atomic <T extends Func> (hook: T) {
     : X extends Atom <any> ? X
     : Atom <X>
   )
-    
+
   function useRecon (...args: any[]): any {
     return useAtomic (hook, ...args)
   }

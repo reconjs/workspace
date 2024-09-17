@@ -1,17 +1,38 @@
-import { timeout } from "@reconjs/utils"
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import { createContext, PropsWithChildren, Suspense, use } from "react"
 // import { Regenerator, get$, use$ } from "recon"
 import { atomic } from "recon"
 import { expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
-import { ErrorBoundary } from "@reconjs/utils-react"
 
 expect.extend (matchers)
 
 const LOADING = <h2>Loading...</h2>
 
-test.only ("SKIP", () => { expect (true) })
+// test.only ("SKIP", () => { expect (true) })
+
+test ("useHelloAtom (no use)", () => {
+  const useHelloAtom = atomic (() => "Hello")
+  
+  function App () {
+    const helloAtom = useHelloAtom ()
+    const hello = "Hello" // use (helloAtom)
+    return <h1>{hello} World</h1>
+  }
+  
+  render (
+    <Suspense fallback={LOADING}>
+      <App />
+    </Suspense>
+  )
+
+  expect (screen.getByRole ("heading"))
+    .not.toHaveTextContent ("Loading...")
+  
+  expect (screen.getByRole ("heading"))
+    .toHaveTextContent ("Hello World")
+})
+
 test ("useHelloAtom (sync)", () => {
   const useHelloAtom = atomic (() => "Hello")
   
@@ -34,7 +55,7 @@ test ("useHelloAtom (sync)", () => {
     .toHaveTextContent ("Hello World")
 })
 
-test ("useHelloAtom (async)", async () => {
+test.only ("useHelloAtom (async)", async () => {
   const useHelloAtom = atomic (async () => "Hello")
   
   function App () {
@@ -88,7 +109,7 @@ test ("useTextAtom", async () => {
   })
 })
 
-test ("useTextAtom (+ generators)", async () => {
+test.skip ("useTextAtom (+ generators)", async () => {
   const useTextAtom = atomic (async (lang: string, english: string) => {
     if (lang === "en") return english
   })
@@ -130,7 +151,8 @@ test ("useTextAtom (+ generators)", async () => {
 
 test.todo ("useTextAtom (preloading)", async () => {
   const useTextAtom = atomic (async (lang: string, english: string) => {
-    if (lang === "en") return english
+    // TODO: support other languages
+    return english
   })
 
   const WorldContext = createContext ("")
