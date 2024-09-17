@@ -1,10 +1,8 @@
-/*
 import { timeout } from "@reconjs/utils"
 import { PropsOf } from "@reconjs/utils-react"
 import { act, render, screen, waitFor } from "@testing-library/react"
-import { Suspense, useState } from "react"
-import { Regenerator, get$, use$ } from "recon"
-*/
+import { Suspense, useState, use } from "react"
+import { atomic, useView } from "recon"
 
 import { beforeEach, describe, expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
@@ -13,26 +11,25 @@ expect.extend (matchers)
 
 test.only ("SKIP", () => { expect (true) })
 
-/*
-test ("Counter (local)", async () => {
-  function* Counter$ () {
-    return ({ label }: any) => {
-      const [ count, setCount ] = useState (0) // eslint-disable-line
-      
-      function onClick () {
-        setCount (count + 1)
-      }
-      
-      return (
-        <button onClick={onClick}>
-          {label}: {count}
-        </button>
-      )
+
+// FIXME: `useView` is not implemented yet.
+test.skip ("Counter (local)", async () => {
+  const useCounterView = atomic (() => {
+    const [ count, setCount ] = useState (0)
+
+    function onClick () {
+      setCount (count + 1)
     }
-  }
+
+    return useView (({ label }: any) => (
+      <button onClick={onClick}>
+        {label}: {count}
+      </button>
+    ))
+  })
   
   function App () {
-    const Counter = use$ (Counter$)
+    const Counter = useCounterView()
     
     return <>
       <Counter label="First" />
@@ -55,20 +52,21 @@ test ("Counter (local)", async () => {
 
 
 
-describe("Counter (shared)", () => {
-  function* countState$() {
-    const [count, setCount] = useState(0) // eslint-disable-line
+describe ("Counter (shared)", () => {
+  const useCounterAtom = atomic (() => {
+    const [ count, setCount ] = useState (0)
     return { count, setCount }
-  }
+  })
 
-  function* Counter$() {
-    const { count, setCount } = yield* get$(countState$)
+  function Counter ({ label }: any) {
+    const _counter = useCounterAtom()
+    const { count, setCount } = use (_counter)
 
     function onClick() {
-      setCount(count + 1)
+      setCount (count + 1)
     }
 
-    return ({ label }: any) => (
+    return (
       <button onClick={onClick}>
         {label}: {count}
       </button>
@@ -76,8 +74,6 @@ describe("Counter (shared)", () => {
   }
 
   function App() {
-    const Counter = use$(Counter$)
-
     return <>
       <Counter label="First" />
       <Counter label="Second" />
@@ -88,7 +84,7 @@ describe("Counter (shared)", () => {
     render (<App />)
   })
 
-  test ("0 clicks", async () => {    
+  test ("0 clicks", async () => {
     expect (screen.getByText ("First: 0")).toBeVisible()
     expect (screen.getByText ("Second: 0")).toBeVisible()
   })
@@ -102,4 +98,3 @@ describe("Counter (shared)", () => {
     expect (screen.queryByText ("Second: 1")).toBeVisible()
   })
 })
-*/

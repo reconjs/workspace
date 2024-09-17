@@ -1,10 +1,16 @@
-import { Func, memoize } from "@reconjs/utils"
-import { Proc, Returns } from "./types"
-import { createContext, ExoticComponent, memo, Usable, useId, use } from "react"
+import { Func } from "@reconjs/utils"
+import { Returns } from "./types"
+import { 
+  createContext,
+  memo, 
+  useId, 
+  use,
+  MemoExoticComponent,
+  useEffect,
+} from "react"
 import { CallEffect, Effect, remit } from "./effect"
-import { Dispatcher, ReactDispatcher } from "./react"
-import { defineStore } from "./store"
-import { extendStore, handleCall, handleEffect } from "./state"
+import { _use, Dispatcher } from "./state"
+import { performEntrypoint } from "./state"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -26,16 +32,17 @@ function* loop (debug: string) {
 
 // ATOM
 
-const UNCONTEXT = createContext (null)
-const UNRENDERED = memo (() => null)
+const COMPONENT_TYPE = doo (() => {
+  const UNRENDERED = memo (() => null)
+  return UNRENDERED.$$typeof
+})
 
 /**
-* Atomic hooks will attempt to resolve synchronously
-*  - If it works and returns atom then $$typeof will be CONTEXT_TYPE
-*    - If we don't do this then we would suspend on resolvable atoms
+* Atoms are Promises, Iterables, and Components.
+*  - As a promise, they are meant to resolve synchronously with `use`.
 *  - Otherwise it will return a promise and $$typeof will be Symbol.for ("react.memo")
 */
-export type Atom<T> = Usable<T> & {
+export type Atom <T> = Promise<T> & {
   [Symbol.iterator]: () => Iterator <Effect, T>,
 }
 
@@ -50,20 +57,13 @@ const ReconContext = createContext <symbol> (ROOT)
 
 // ATOMIC API
 
-const handleAtom = extendStore (function* (
-  scope: symbol,
-  id: string,
-  func: Func, 
-  ...args: any[]
-) {  
-  function createAtom (usable: Usable <any>): Atom <any> {
-    const atom: any = usable
-    atom[Symbol.iterator] ??= function* () {
-      return yield* new CallEffect (scope, func, args)
-    }
-    return atom
-  }
-  
+/*
+
+function handleCall (x) {
+  // noop
+}
+
+const resolveAtom = extendStore (function* (scope, func, ...args) {
   let callEffect = function* () {
     return yield* new CallEffect (scope, func, args)
   }
@@ -77,26 +77,138 @@ const handleAtom = extendStore (function* (
       yield* effect
     }
   })
-  
+
   try {
     const value = yield* callEffect()
-    
-    return createAtom ({
-      $$typeof: UNCONTEXT.$$typeof,
-      // @ts-ignore
-      _currentValue: value,
-      _currentValue2: value,
-    })
+    return {
+      status: "fulfilled",
+      value,
+    }
   }
   catch (thrown) {
     if (thrown instanceof Promise) {
-      return createAtom (thrown)
+      return {
+        status: "pending",
+      }
     }
     else {
-      throw thrown
+      return {
+        status: "rejected",
+        reason: thrown,
+      }
     }
   }
 })
+
+const preloadAtom = extendStore (async function* (scope, func, ...args) {
+  let callEffect = function* () {
+    return yield* new CallEffect (scope, func, args)
+  }
+  
+  // Call handleCall for all CallEffects
+  callEffect = remit (callEffect, function* (effect) {
+    if (effect instanceof CallEffect) {
+      handleCall (effect)
+    }
+    else {
+      handleEffect (effect)
+    }
+  })
+
+  for (const _ of loop ("preloadAtom")) {
+    try {
+      const { value } = callEffect().next()
+      return value
+    }
+    catch (thrown) {
+      if (thrown instanceof Promise) {
+        await thrown
+      }
+      else {
+        throw thrown
+      }
+    }
+  }
+})
+
+const createAtom = extendStore (function* (
+  scope: symbol,
+  id: string,
+  func: Func, 
+  ...args: any[]
+) {
+  let loaded = false
+
+  function applyUsability (atom: Atom <any>) {
+    let self: any = {}
+
+    Object.defineProperties (atom, {
+      status: {
+        get() {
+          if (!self.status) {
+            self = resolveAtom (scope, func, ...args)
+            if (self.status !== "pending") {
+              loaded = true
+            }
+          }
+
+          console.assert (self.status)
+          return self.status
+        },
+        set (newStatus) {
+          self.status = newStatus
+        }
+      },
+      reason: {
+        get() {
+          return self.reason
+        },
+        set (next) {
+          self.reason = next
+        }
+      },
+      value: {
+        get() {
+          return self.value
+        },
+        set (next) {
+          self.value = next
+        }
+      },
+    })
+  }
+
+  const atom: any = doo (async () => {
+    if (loaded) return
+    await preloadAtom (scope, func, ...args)
+  })
+
+  applyUsability (atom)
+
+  atom[Symbol.iterator] ??= function* () {
+    try {
+      return yield* new CallEffect (scope, func, args)
+    }
+    finally {
+      loaded = true
+    }
+  }
+
+  atom.$$typeof = COMPONENT_TYPE
+  atom.type = function ReconView (props: any) {
+    const render = use (atom)
+    if (typeof render === "function") {
+      return render (props)
+    }
+    else {
+      return render
+    }
+  }
+
+  // yield new CallEffect (scope, func, args)
+  return atom as Atom <any>
+})
+*/
 
 
 
@@ -109,23 +221,38 @@ export function useAtomic <T extends Func> (
   if (dispatcher.useAtomic) return dispatcher.useAtomic (hook, ...args)
   
   const id = useId() // eslint-disable-line
+
+  // eslint-disable-next-line
+  useEffect (() => {
+
+  }, [])
+
+  /* TODO: Sync lifecycles with Recon.
+  useLayoutEffect (() => {
+
+  }, [])
+
+  useInsertionEffect (() => {
+
+  }, [])
+  */
+
+  
   const scope = use (ReconContext) // eslint-disable-line
-  const atom = handleAtom (scope, id, hook, ...args)
-  console.log ("[useAtomic]", atom)
-  return atom
+  return performEntrypoint (id, scope, hook, ...args)
 }
 
-export function atomic <T extends Func> (
-  hook: T
-) {
+
+
+export function atomic <T extends Func> (hook: T) {
   type P = Parameters <T>
   type X = Returns <T>
   type R = (
-    X extends ExoticComponent <any> ? X
+    X extends MemoExoticComponent <any> ? X
     : X extends Atom <any> ? X
     : Atom <X>
   )
-    
+
   function useRecon (...args: any[]): any {
     return useAtomic (hook, ...args)
   }

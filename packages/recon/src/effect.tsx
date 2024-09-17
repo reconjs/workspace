@@ -1,5 +1,6 @@
 import { Func, Func0 } from "@reconjs/utils"
 import { AnyGenerator, Proc } from "./types"
+import { Atom } from "./atomic"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -81,6 +82,7 @@ export class Effect <T = any> {
     return this.#async.promise
   }
   
+  /*
   get then () {
     return this.promise.then
   }
@@ -92,6 +94,7 @@ export class Effect <T = any> {
   get finally () {
     return this.promise.finally
   }
+  */
   
   #iterator: Regenerator <void> = doo (() => {
     const _this = this
@@ -160,7 +163,7 @@ export class Effect <T = any> {
 
 
 
-export class CallEffect <T = any> extends Effect <T> {
+export class CallEffect extends Effect <Atom <any>> {
   constructor (
     public scope: symbol,
     public func: Func,

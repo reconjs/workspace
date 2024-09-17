@@ -1,22 +1,58 @@
-import { FunctionComponent } from "react"
-import { Dispatcher } from "./react"
+import { ComponentProps, ComponentType, FunctionComponent, MemoExoticComponent, useId } from "react"
+import { Dispatcher } from "./state"
+import { PropsOf } from "@reconjs/utils-react"
+import { memoize } from "@reconjs/utils"
+import { extendStore, InviewEndEffect, InviewStartEffect } from "./state"
 
 const ERR1 = "useView must be called inside a Recon or React component"
 
-type ReconView = {
-  $$typeof: symbol // TODO: Symbol("react.memo")
-  compare: null
-  type: FunctionComponent
-  get displayName (): string
-  set displayName (value: string)
+export type View <P> = MemoExoticComponent <
+  FunctionComponent <P>
+>
+
+export type ViewOf <C extends FunctionComponent <any>> = View <ComponentProps <C>>
+
+export type AnyView = View <any>
+
+function NEVER_VIEW () {
+  throw new Error ("NEVER_VIEW")
 }
 
-export function useView <
-  T extends FunctionComponent <any>
-> (view: T): T {
+const renderById = memoize ((_: string) => ({
+  current: NEVER_VIEW as any,
+}))
+
+const handleRender = extendStore (function* (render: () => any) {
+  yield new InviewStartEffect()
+
+  try {
+    return render ()
+  }
+  finally {
+    yield new InviewEndEffect()
+  }
+})
+
+const viewById = memoize ((id: string): ComponentType <any> => {
+  return function ReconView (props: any) {
+    return handleRender (() => {
+      const render = renderById (id).current
+      return render (props)
+    })
+  }
+})
+
+
+
+export function useView <F extends FunctionComponent> (render: F): ViewOf <F> {
   const dispatcher = Dispatcher.current
-  if (!dispatcher) throw new Error (ERR1)
-  if (dispatcher.useView) return dispatcher.useView (view)
+  if (!dispatcher) throw new Error ("No such hook")
   
-  throw new Error ("[useView] expected in a Recon Component")
+  if (dispatcher.useView) return dispatcher.useView (render)
+
+  const id = useId() // eslint-disable-line
+  renderById (id).current = render
+
+  // INTENTIONALLY NOT MEMOIZED
+  return viewById (id) as MemoExoticComponent <any>
 }
