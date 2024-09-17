@@ -1,9 +1,9 @@
 import { Func, Func0, range, Vunc } from "@reconjs/utils"
-import React, { DependencyList, FunctionComponent, memo, MemoExoticComponent, Usable } from "react"
+import React, { DependencyList, memo, MemoExoticComponent } from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
-import { AsyncGeneratorFunction, GeneratorFunction, Prac, Proc, Returns } from "../types"
-import { AnyView, View } from "../use-view"
+import { GeneratorFunction } from "../types"
+import { AnyView } from "../use-view"
 import { Atom } from "../atomic"
 
 const WINDOW = typeof window !== "undefined" 
@@ -182,9 +182,14 @@ class StateInfo <S extends StateSelf = StateSelf> {
   }
 
   withData (data: DataInfo) {
+    const found = this.self.datas
+      .find ((x) => x.edge.equals (data.edge))
+
     return this.build ({
       ...this.self,
-      datas: this.self.datas.with (data),
+      datas: this.self.datas
+        .with (data)
+        .without (x => x === found)
     })
   }
 
@@ -352,6 +357,10 @@ const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
 
   if (effect instanceof StatusEffect) {
     return reduceStatus (state, effect)
+  }
+
+  if (effect instanceof AsyncStatusEffect) {
+    return reduceStatusAsync (state, effect)
   }
   
   console.error ("Unknown effect:", effect)
@@ -591,20 +600,41 @@ class StatusEffect extends Effect <void> {
   }
 }
 
-const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
-  const status = yield* new AtomEffect (atom)
+class AsyncStatusEffect extends Effect <void> {
+  constructor (
+    public readonly status: Status,
+    public readonly edge: EdgeInfo,
+  ) {
+    super()
+  }
+}
 
-  if (status instanceof Fulfilled) return
-  if (status instanceof Rejected) throw status.reason
-  if (status instanceof Pending) await status.promise
-  else {
-    console.error ("[performLoadingOf] unknown status", status)
-    throw new Error ("[performLoadingOf] unknown status")
+const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
+  console.group ("--- performLoadingOf ---")
+
+  try {
+    for (const _ of loop ("performLoadingOf")) {
+      const status = yield* new AtomEffect (atom)
+      console.groupEnd()
+
+      if (status instanceof Fulfilled) return
+      if (status instanceof Rejected) throw status.reason
+      if (status instanceof Pending) await status.promise
+      else {
+        console.error ("[performLoadingOf] unknown status", status)
+        throw new Error ("[performLoadingOf] unknown status")
+      }
+    }
+  }
+  finally {
+    console.groupEnd()
   }
 })
 
 const handleStatusOf = extendStore (function* (atom: Atom <any>) {
+  console.group ("handleStatusOf")
   const status = yield* new AtomEffect (atom)
+  console.groupEnd()
 
   if (status instanceof Fulfilled) return "fulfilled"
   if (status instanceof Rejected) return "rejected"
@@ -614,13 +644,19 @@ const handleStatusOf = extendStore (function* (atom: Atom <any>) {
 })
 
 const handleReasonOf = extendStore (function* (atom: Atom <any>) {
+  console.group ("<handleReasonOf>")
   const status = yield* new AtomEffect (atom)
+  console.groupEnd()
+
   if (status instanceof Rejected) return status.reason
   throw new Error ("Atom was not rejected")
 })
 
 const handleValueOf = extendStore (function* (atom: Atom <any>) {
+  console.group ("<handle-value-of>")
   const status = yield* new AtomEffect (atom)
+  console.groupEnd()
+
   if (status instanceof Fulfilled) return status.value
   throw new Error ("Atom was not fulfilled")
 })
@@ -671,21 +707,32 @@ function createAtom() {
   return atom
 }
 
-function reduceStatus (state: StateInfo, { status }: StatusEffect) {
+function reduceStatus (state: StateInfo, effect: StatusEffect) {
   if (! (state instanceof ActiveState)) {
+    console.log ("[reduceStatus]", state)
     throw new Error ("[reduceStatus] state not active")
   }
+  
+  const { edge } = state.peek()
 
   // TODO: This is not going to be true when we need to load args...
-  const { id, edge } = state.peek()
   const res = state
     .pop()
-    .withoutTask ((x) => x.id === id)
-    .withData (new DataInfo (edge, status))
+    .withData (new DataInfo (edge, effect.status))
   return res
 }
 
-const performUpdate = extendStore (async function* (atom: Atom <any>, promise: Promise <any>) {
+function reduceStatusAsync (state: StateInfo, effect: AsyncStatusEffect) {
+  // TODO: This is not going to be true when we need to load args...
+  const res = state
+    .withData (new DataInfo (effect.edge, effect.status))
+  return res
+}
+
+const performUpdate = extendStore (async function* (
+  edge: EdgeInfo, 
+  promise: Promise <any>
+) {
   const status = await doo (async () => {
     try {
       const value = await promise
@@ -696,12 +743,19 @@ const performUpdate = extendStore (async function* (atom: Atom <any>, promise: P
     }
   })
 
-  yield new AtomEffect (atom)
-  yield new StatusEffect (status)
+  yield new AsyncStatusEffect (status, edge)
 })
 
 function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
-  const { func, args } = edge
+  let { func, args } = edge
+
+  args = args.map (arg => {
+    if (arg instanceof ValueParam) {
+      return arg.value
+    }
+
+    throw new Error ("Atom parameters are not yet supported")
+  })
 
   effect.yield (function* () {
     try {
@@ -714,11 +768,13 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
         result = func (...args)
       }
 
+      console.log ("[reduceAtomAux] result", result)
+
       if (! (result instanceof Promise)) {
         yield new StatusEffect (new Fulfilled (result))
       }
       else {
-        const promise = performUpdate (effect.atom, result)
+        const promise = performUpdate (edge, result)
         yield new StatusEffect (new Pending (promise))
       }
     }
@@ -732,12 +788,13 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
 }
 
 function reduceAtom (state: StateInfo, effect: AtomEffect) {
-  console.log ("[reduceAtom]")
+  console.log ("- reduceAtom")
 
   const edge = state.edgeOf (effect.atom)
   const data = state.findData (x => x.edge.equals (edge))
 
   if (data) {
+    console.log ("found status!", data.status)
     effect.return (data.status)
     return state
   }

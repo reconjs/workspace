@@ -23,7 +23,7 @@ const NEVER = doo(() => {
   return res
 })
 
-
+let FAILED = false
 
 export function defineStore <T> (
   initialState: T,
@@ -33,6 +33,8 @@ export function defineStore <T> (
   
   function defineAsyncAction (prac: Reprac) {
     return async function call$ (...args: any[]) {
+      if (FAILED) throw new Error ("Failure")
+
       const iter = prac (...args)
       
       let prev = NEVER
@@ -56,32 +58,41 @@ export function defineStore <T> (
         }
       }
       catch (error) {
-        console.error ("FROM STORE", error)
+        console.error ("ASYNC ERROR", error)
+        FAILED = true
       }
     }
   }
   
   function defineSyncAction (proc: Reproc) {
     return function call (...args: any[]) {
+      if (FAILED) throw new Error ("Failure")
+
       const iter = proc (...args)
       
       let prev = NEVER
       
-      for (const _ of loop ("defineSyncAction")) {
-        const { done, value } = iter.next()
-        if (done) return value
-        
-        if (! (value instanceof Effect)) {
-          throw new Error ("[defineSyncAction] only accepts Effects")
+      try {
+        for (const _ of loop ("defineSyncAction")) {
+          const { done, value } = iter.next()
+          if (done) return value
+          
+          if (! (value instanceof Effect)) {
+            throw new Error ("[defineSyncAction] only accepts Effects")
+          }
+          
+          if (prev === value) {
+            throw new Error ("[defineSyncAction] should not return the same effect")
+          }
+          
+          const nextState = reducer (state, value)
+          if (!nextState) throw new Error ("No next state")
+          state = nextState
         }
-        
-        if (prev === value) {
-          throw new Error ("[defineSyncAction] should not return the same effect")
-        }
-        
-        const nextState = reducer (state, value)
-        if (!nextState) throw new Error ("No next state")
-        state = nextState
+      }
+      catch (error) {
+        console.error ("SYNC ERROR", error)
+        FAILED = true
       }
     }
   }

@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import { createContext, PropsWithChildren, Suspense, use } from "react"
 // import { Regenerator, get$, use$ } from "recon"
 import { atomic } from "recon"
-import { expect, test } from "vitest"
+import { vi, beforeEach, describe, expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
 
 expect.extend (matchers)
@@ -55,32 +55,41 @@ test ("useHelloAtom (sync)", () => {
     .toHaveTextContent ("Hello World")
 })
 
-test.only ("useHelloAtom (async)", async () => {
-  const useHelloAtom = atomic (async () => "Hello")
+describe ("useHelloAtom (async)", () => {
+  const useHelloAtom = atomic (async () => {
+    return "Hello"
+  })
   
   function App () {
     const helloAtom = useHelloAtom()
     const hello = use (helloAtom)
     return <h1>{hello} World</h1>
   }
-  
-  render (
-    <Suspense fallback={LOADING}>
-      <App />
-    </Suspense>
-  )
-  
-  expect (screen.getByRole ("heading"))
-    .toHaveTextContent ("Loading...")
-  
-  await waitFor (() => {
+
+  beforeEach (() => {
+    render (
+      <Suspense fallback={LOADING}>
+        <App />
+      </Suspense>
+    )
+  })
+
+  test ("suspends", () => {
     expect (screen.getByRole ("heading"))
-      .toHaveTextContent ("Hello World")
+      .toHaveTextContent ("Loading...")
+  })
+
+  test ("resolves to 'Hello World'", async () => {
+    await waitFor (() => {
+      expect (screen.getByRole ("heading"))
+        .toHaveTextContent ("Hello World")
+    })
   })
 })
 
-test ("useTextAtom", async () => {
+test ("useTextAtom (both)", async () => {
   const useTextAtom = atomic (async (lang: string, english: string) => {
+    console.log ("useTextAtom", lang, english)
     if (lang === "en") return english
   })
   
@@ -114,9 +123,9 @@ test.skip ("useTextAtom (+ generators)", async () => {
     if (lang === "en") return english
   })
   
-  const useHelloAtom = atomic (() => {
-    const atom = useTextAtom ("en", "Hello")
-    return use (atom)
+  const useHelloAtom = atomic (function* () {
+    const hello = yield* useTextAtom ("en", "Hello")
+    return hello
   })
   
   const useWorldAtom = atomic (() => {
@@ -125,11 +134,11 @@ test.skip ("useTextAtom (+ generators)", async () => {
   })
   
   function App () {
-    const helloAtom = useHelloAtom()
-    const worldAtom = useWorldAtom()
+    const _hello = useHelloAtom()
+    const _world = useWorldAtom()
     
-    const hello = use (helloAtom)
-    const world = use (worldAtom)
+    const hello = use (_hello)
+    const world = use (_world)
     
     return <h1>{hello} {world}</h1>
   }
