@@ -1,48 +1,53 @@
-# ReconJS - Universal Composition
+# Yet Another State Management Library
 
-Libraries like ReactJS and SolidJS allow you to compose UI, with ReconJS
-we want to make it possible to compose entire full-stack applications.
+ReconJS is an extension of React which adds better state management support.
 
-There are no devtool plugins but a bundler does need
-to be configured to create client and server bundles.
+- [x] Share State between Distant Components
+- [x] Data Loading
+- [x] Non-Global Lifecycles
+- [x] Actions & Transitions
 
+NOTE: This library is a work-in-progress.
 
+## Hello World
+
+```jsx
+import { use, useState } from "react"
+import { atomic } from "@reconjs/react"
+
+import { fetchTranslated } from "..." // you
+
+const useGreetingAtom = atomic (async () => {
+  return await fetchTranslated ("en", "Hello")
+})
+
+const useAudienceAtom = atomic (() => {
+  const [ audience, setAudience ] = useState ("World")
+  return { audience, setAudience }
+})
+
+function Page () {
+  const _greeting = useGreetingAtom()
+  const _audience = useAudienceAtom()
+
+  const greeting = use (_greeting)
+  const { audience } = use (_audience)
+
+  // Hello World
+  return <h1>{greeting} {audience}</h1>
+}
+```
+
+## Atomic Hooks
+
+Hooks are a nice pattern but they have one major problem: they **must** belong to a React Component.
+
+But what if I want to share state between multiple components? 
+That's what an Atomic Hook is for! 
+A hook that is shared between components.
 
 ## Getting Started
 
 Currently, this library isn't being published because it doesn't work yet.
 
-[LEARN API HERE](https://github.com/reconjs/workspace/discussions/3)
-
-### How do I navigate the repo?
-
-- `examples` contains locally runnable projects for testing the packages.
-- `packages` contains the publishable packages that make up the core functionality.
-
-### Which example should I start with?
-
-`examples/hello-world` is the simplest.
-
-`examples/lolalemon` will demonstrate how this scales to a real use case.
-- More specifically, go to the product page: `/product/align-25`
-
-## Packages
-
-`@reconjs/internals` is a package for library authors to build new Recon APIs,
-including the ones in this repo.
-
-- `@reconjs/core` for framework-agnostic Recon APIs.
-- `@reconjs/server` (TODO) for server-specific Recon APIs.
-
-There are also general packages starting with `@reconjs/utils-`
-that even non-Recon projects can use.
-
-- `@reconjs/utils` for general JS utilities.
-- `@reconjs/utils-server` for server-specific utilities.
-
-For now, we only have ReactJS (+ RSC) support.
-If this gets traction, more framework may be added.
-
-- `@reconjs/react` for ReactJS-specific Recon APIs.
-- `@reconjs/next` for NextJS-specific Recon APIs.
-- `@reconjs/utils-react` for React-specific utilities.
+v0.1 is coming in early October 2024!
