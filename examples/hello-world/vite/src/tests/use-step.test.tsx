@@ -9,41 +9,63 @@ import * as matchers from "@testing-library/jest-dom/matchers"
 
 expect.extend (matchers)
 
+const NIL = undefined as any
+
 function doo <T> (func: () => T) {
   return func()
 }
 
 describe ("_use", () => {
   test ("Shared ID", async () => {
-    const guid = doo (() => {
-      let count = 0
-      return () => count++
-    })
-
-    const useAppId = atomic (() => {
-      console.log ("--- useAppId ---")
-      return _use (() => guid())
+    const useClickRefAtom = atomic (() => {
+      return _use (() => ({
+        current: NIL as VoidFunction
+      }))
     })
 
     function Section (props: {
       label: string
     }) {
-      const id = useAppId()
-      return <div>{props.label}: {id}</div>
+      const atom = useClickRefAtom()
+      const ref = use (atom)
+
+      const [ count, setCount] = useState(0)
+
+      ref.current ??= () => {
+        setCount (x => x + 1)
+      }
+
+      return (
+        <button onClick={ref.current}>
+          {props.label}: {count}
+        </button>
+      )
     }
     
     function App () {
       return <>
-        <h1>Zero: {guid()}</h1>
-        <Section label="One" />
-        <Section label="Uno" />
+        <Section label="First" />
+        <Section label="Second" />
       </>
     }
     
     render (<App />)
     
-    expect (screen.getByText ("Zero: 0")).toBeVisible()
-    expect (screen.getByText ("One: 1")).toBeVisible()
-    expect (screen.getByText ("Uno: 1")).toBeVisible()
+    expect (screen.getByText ("First: 0")).toBeVisible()
+    expect (screen.getByText ("Second: 0")).toBeVisible()
+    
+    act (() => {
+      screen.getAllByRole ("button")[0]?.click?.()
+    })
+    
+    expect (screen.getByText ("First: 1")).toBeVisible()
+    expect (screen.getByText ("Second: 0")).toBeVisible()
+
+    act (() => {
+      screen.getAllByRole ("button")[1]?.click?.()
+    })
+
+    expect (screen.getByText ("First: 2")).toBeVisible()
+    expect (screen.getByText ("Second: 0")).toBeVisible()
   })
 })

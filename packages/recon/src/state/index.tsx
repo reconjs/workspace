@@ -760,9 +760,11 @@ function createAtom() {
     }
   })
 
+  /* NOTE: This leads to wonky behavior when rendered.
   atom[Symbol.iterator] = function* () {
     return yield* new AtomEffect (atom)
   }
+  */
 
   Object.defineProperties (atom, {
     status: {
@@ -790,6 +792,8 @@ function createAtom() {
       }
     },
   })
+
+  atom.$$typeof 
 
   return atom
 }
@@ -1037,7 +1041,7 @@ function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
 /**
  * A hook for a constant
  */
-export function _use <T> (factory: () => T) {
+export function _use <T> (factory: () => T): T {
   const dispatcher = Dispatcher.current
   if (!dispatcher) return factory()
   

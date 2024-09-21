@@ -100,7 +100,7 @@ export class Effect <T = any> {
     const _this = this
     
     return doo <AnyGenerator> (function* () {
-      while (true) {
+      for (const _ of loop ("Effect.#iterator")) {
         yield _this
       }
     })

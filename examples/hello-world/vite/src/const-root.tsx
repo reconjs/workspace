@@ -16,15 +16,16 @@ const guid = doo (() => {
   }
 })
 
-const useAppId = atomic (() => {
-  return 1
+const useAppIdAtom = atomic (() => {
+  return guid()
 })
 
 function Section (props: {
   label: string
 }) {
-  const id = useAppId()
-  return <div>{props.label}: {id}</div>
+  const atom = useAppIdAtom()
+  // const id = use (atom)
+  return <div>{props.label}: {atom}</div>
 }
 
 function App () {
