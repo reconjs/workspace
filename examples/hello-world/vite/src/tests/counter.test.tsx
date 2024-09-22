@@ -2,7 +2,7 @@ import { timeout } from "@reconjs/utils"
 import { PropsOf } from "@reconjs/utils-react"
 import { act, render, screen, waitFor } from "@testing-library/react"
 import { Suspense, useState, use } from "react"
-import { _use, atomic, useView } from "recon"
+import { _use, atomic, revalidate, useView } from "recon"
 
 import { beforeEach, describe, expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
@@ -48,7 +48,7 @@ describe ("Counter", () => {
     expect (screen.getByText ("Second: 0")).toBeVisible()
   })
 
-  describe.skip ("Counter (shared)", () => {
+  describe ("Counter (shared)", () => {
     const useCounterAtom = atomic (() => {
       const [ count, setCount ] = useState (0)
       return { count, setCount }
@@ -60,6 +60,7 @@ describe ("Counter", () => {
 
       function onClick() {
         setCount (count + 1)
+        revalidate (_counter) // TODO: Should be automatic
       }
 
       return (

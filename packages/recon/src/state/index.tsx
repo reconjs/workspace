@@ -1326,6 +1326,25 @@ function reduceUseReducer (state: StateInfo, effect: UseReducerEffect) {
 
 // #region useState
 
+REDISPATCHER.useState = function useState (initial: any) {
+  const ref = _use (() => {
+    const state = typeof initial === "function" ? initial() : initial
+    return { state }
+  })
+
+  const setState = _use (() => (update: any) => {
+    if (typeof update === "function") {
+      ref.state = update (ref.state)
+    }
+    else {
+      ref.state = update
+    }
+  })
+
+  return [ ref.state, setState ]
+}
+
+/*
 export class UseStateEffect extends Effect <[ any, Func ]> {
   constructor (
     public init: any,
@@ -1341,6 +1360,7 @@ REDISPATCHER.useState = extendStore (function* (init: any) {
 function reduceUseState (state: StateInfo, effect: UseStateEffect) {
   throw new Error ("[reduceUseState] not implemented")
 }
+*/
 
 // #endregion
 
