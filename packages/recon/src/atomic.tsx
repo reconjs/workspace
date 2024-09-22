@@ -1,4 +1,4 @@
-import { Func } from "@reconjs/utils"
+import { Func, memoize } from "@reconjs/utils"
 import { Returns } from "./types"
 import { 
   createContext,
@@ -7,10 +7,13 @@ import {
   use,
   MemoExoticComponent,
   useEffect,
+  useSyncExternalStore,
 } from "react"
 import { CallEffect, Effect, remit } from "./effect"
 import { _use, Dispatcher } from "./state"
 import { performEntrypoint } from "./state"
+import { subscribe } from "diagnostics_channel"
+import { useResync } from "./resync"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -82,7 +85,7 @@ export function useAtomic <T extends Func> (
   }, [])
   */
 
-  
+  useResync (id) // eslint-disable-line
   const scope = use (ReconContext) // eslint-disable-line
   return performEntrypoint (id, scope, hook, ...args)
 }

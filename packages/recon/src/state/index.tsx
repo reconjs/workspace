@@ -1,11 +1,12 @@
-import { Func, Func0, range, Vunc } from "@reconjs/utils"
-import React, { DependencyList, memo, MemoExoticComponent } from "react"
+import { createEvent, Func, Func0, range, Subscribe, Vunc } from "@reconjs/utils"
+import React, { DependencyList, memo, MemoExoticComponent, useEffect } from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
 import { GeneratorFunction } from "../types"
 import { AnyView } from "../use-view"
 import { Atom } from "../atomic"
 import { faulty } from "./fault"
+import { resyncAll } from "../resync"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -114,10 +115,40 @@ class Bunch <T> {
   }
 }
 
+function substate <T> (read: () => Bunch <T>) {
+  function withBuild <S> (build: (bunch: Bunch <T>) => S) {
+    return {
+      get: (predicate: (item: T) => boolean) => {
+        const bunch = read()
+        const found = bunch.find (predicate)
+        if (!found) throw new Error ("[get] not found")
+        return found
+      },
+      find: (predicate: (item: T) => boolean) => {
+        const bunch = read()
+        return bunch.find (predicate)
+      },
+      with: (item: T) => {
+        const bunch = read()
+        return build (bunch.with (item))
+      },
+      without: (predicate: (item: T) => boolean) => {
+        const bunch = read ()
+        return build (bunch.without (predicate))
+      },
+    }
+  }
+
+  return {
+    withBuild,
+  }
+}
+
 const EMPTY = new Bunch <any> ([])
 
 type StateSelf = {
-  atoms: Bunch <AtomInfo>,
+  entries: Bunch <EntrypointInfo>,
+  pointers: Bunch <PointerInfo>,
   nodes: Bunch <NodeInfo>,
   procs: Bunch <ProcInfo>,
   tasks: Bunch <TaskInfo>,
@@ -142,40 +173,49 @@ class StateInfo <S extends StateSelf = StateSelf> {
     })
   }
 
+  get entries() {
+    return substate (() => this.self.entries)
+      .withBuild ((entries) => this.build ({ ...this.self, entries }))
+  }
+
+  get pointers() {
+    return substate (() => this.self.pointers)
+      .withBuild ((pointers) => this.build ({ ...this.self, pointers }))
+  }
+
+  get nodes() {
+    return substate (() => this.self.nodes)
+      .withBuild ((nodes) => this.build ({ ...this.self, nodes }))
+  }
+
+  get procs() {
+    return substate (() => this.self.procs)
+      .withBuild ((procs) => this.build ({ ...this.self, procs }))
+  }
+
+  get tasks() {
+    return substate (() => this.self.tasks)
+      .withBuild ((tasks) => this.build ({ ...this.self, tasks }))
+  }
+
+  get errors() {
+    return substate (() => this.self.errors)
+      .withBuild ((errors) => this.build ({ ...this.self, errors }))
+  }
+
   edgeOf (atom: Atom <any>) {
-    const info = this.findAtom ((x) => x.atom === atom)
-    if (!info) throw new Error ("[edgeOf] atom not found")
-    return info.edge
-  }
+    const pointer = this.pointers.get ((x) => x.atom === atom)
 
-  findAtom (predicate: (atom: AtomInfo) => boolean) {
-    return this.self.atoms.find (predicate)
-  }
-
-  findNode (predicate: (data: NodeInfo) => boolean) {
-    return this.self.nodes.find (predicate)
-  }
-
-  findProc (predicate: (proc: ProcInfo) => boolean) {
-    return this.self.procs.find (predicate)
-  }
-
-  findTask (predicate: (task: TaskInfo) => boolean) {
-    return this.self.tasks.find (predicate)
-  }
-
-  withAtom (atom: AtomInfo) {
-    return this.build ({
-      ...this.self,
-      atoms: this.self.atoms.with (atom),
-    })
-  }
-
-  withoutAtom (predicate: (atom: AtomInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      atoms: this.self.atoms.without (predicate),
-    })
+    if (pointer instanceof EdgePointer) {
+      return pointer.edge
+    }
+    else if (pointer instanceof EntryPointer) {
+      const entry = this.entries.get ((x) => x.id === pointer.id)
+      return entry.edge
+    }
+    else {
+      throw new Error ("[edgeOf] unknown pointer")
+    }
   }
 
   withNode (node: NodeInfo) {
@@ -190,27 +230,6 @@ class StateInfo <S extends StateSelf = StateSelf> {
     })
   }
 
-  withoutNode (predicate: (data: NodeInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      nodes: this.self.nodes.without (predicate),
-    })
-  }
-
-  withProc (proc: ProcInfo) {
-    return this.build ({
-      ...this.self,
-      procs: this.self.procs.with (proc),
-    })
-  }
-
-  withoutProc (predicate: (proc: ProcInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      procs: this.self.procs.without (predicate),
-    })
-  }
-
   withTask (task: TaskInfo) {
     const found = this.self.tasks
       .find ((x) => x.edge.equals (task.edge))
@@ -221,24 +240,11 @@ class StateInfo <S extends StateSelf = StateSelf> {
       tasks: this.self.tasks.with (task),
     })
   }
-
-  withoutTask (predicate: (task: TaskInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      tasks: this.self.tasks.without (predicate),
-    })
-  }
-
-  withError (error: Error) {
-    return this.build ({
-      ...this.self,
-      errors: this.self.errors.with (error),
-    })
-  }
 }
 
 const INIT_STATE = new StateInfo ({
-  atoms: EMPTY,
+  entries: EMPTY,
+  pointers: EMPTY,
   nodes: EMPTY,
   procs: EMPTY,
   tasks: EMPTY,
@@ -288,7 +294,7 @@ class ActiveState extends StateInfo <ActiveSelf>  {
   peek() {
     const [ call ] = this.self.stack
     
-    const task = this.findTask ((task) => task.id === call.task)
+    const task = this.tasks.find ((task) => task.id === call.task)
     if (!task) throw new Error ("[peek] task not found")
     return task
   }
@@ -323,8 +329,36 @@ class ActiveState extends StateInfo <ActiveSelf>  {
 
 // STORE DEFINITION
 
+// #region Inline Views
+
 export class InviewStartEffect extends Effect <void> {}
 export class InviewEndEffect extends Effect <void> {}
+
+function reduceInviewEnd (state: StateInfo, effect: InviewEndEffect) {
+  const { inview, ..._state } = state
+  if (!inview) throw new Error ("[InviewEndEffect] No inview")
+  Dispatcher.current = inview.dispatcher
+  return _state
+}
+
+function reduceInviewStart (state: StateInfo, effect: InviewStartEffect) {
+  if (state.inview) throw new Error ("[InviewStartEffect] inview")
+  if (state.prerendering) throw new Error ("[InviewStartEffect] prerendering")
+
+  const dispatcher = Dispatcher.current
+  if (!dispatcher) {
+    throw new Error ("[InviewStartEffect] No dispatcher")
+  }
+
+  return {
+    ...state,
+    inview: {
+      dispatcher
+    },
+  }
+}
+
+// #endregion
 
 function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   if (effect instanceof UseAtomicEffect) {
@@ -346,30 +380,12 @@ const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
   
   if (effect instanceof InviewEndEffect) {
     return state
-
-    const { inview, ..._state } = state
-    if (!inview) throw new Error ("[InviewEndEffect] No inview")
-    Dispatcher.current = inview.dispatcher
-    return _state
+    // return reduceInviewEnd (state, effect)
   }
 
   if (effect instanceof InviewStartEffect) {
     return state
-
-    if (state.inview) throw new Error ("[InviewStartEffect] inview")
-    if (state.prerendering) throw new Error ("[InviewStartEffect] prerendering")
-
-    const dispatcher = Dispatcher.current
-    if (!dispatcher) {
-      throw new Error ("[InviewStartEffect] No dispatcher")
-    }
-
-    return {
-      ...state,
-      inview: {
-        dispatcher
-      },
-    }
+    // return reduceInviewStart (state, effect)
   }
 
   if (effect instanceof UseAtomicEffect) {
@@ -390,6 +406,10 @@ const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
 
   if (effect instanceof AsyncStatusEffect) {
     return reduceStatusAsync (state, effect)
+  }
+
+  if (effect instanceof RevalidateEffect) {
+    return reduceRevalidate (state, effect)
   }
 
   if (state instanceof ActiveState) {
@@ -415,6 +435,10 @@ export const handleEffect = extendStore (function* (effect: Effect) {
   else {
     yield* effect
   }
+})
+
+export const handleEffectAsync = extendStore (async function* (effect: Effect) {
+  yield* effect
 })
 
 
@@ -564,13 +588,14 @@ class DirtyNode extends NodeInfo {
   }
 
   withStep <T extends StateInfo> (state: T, step: StepInfo): T {
-    const res = state
-      .withoutNode (x => x === this)
+    const nextState = state
+      .nodes.without (x => x === this)
       .withNode (new DirtyNode (this.edge, [
         ...this.steps,
         step,
       ]))
-    return res as T
+
+    return nextState as T
   }
 
   withStatus (status: Status) {
@@ -604,6 +629,13 @@ class CleanNode extends NodeInfo {
 
 // #endregion
 
+class ViewInfo {
+  constructor (
+    public readonly id: string,
+    public readonly edge: CleanEdge,
+  ) {}
+}
+
 // #region Tasks
 
 class CallInfo {
@@ -631,14 +663,6 @@ class RenderTask extends TaskInfo {
 }
 
 // #endregion
-
-class AtomInfo {
-  atom = createAtom()
-
-  constructor (
-    public readonly edge: EdgeInfo,
-  ) {}
-}
 
 // #region Atoms
 
@@ -731,9 +755,9 @@ const handleStatusOf = extendStore (function* (atom: Atom <any>) {
 })
 
 const handleReasonOf = extendStore (function* (atom: Atom <any>) {
-  console.group ("handleReasonOf")
+  // console.group ("handleReasonOf")
   const status = yield* new AtomEffect (atom)
-  console.groupEnd()
+  // console.groupEnd()
 
   if (status instanceof Rejected) return status.reason
   throw new Error ("Atom was not rejected")
@@ -793,35 +817,31 @@ function createAtom() {
     },
   })
 
-  atom.$$typeof 
-
   return atom
 }
 
 function reduceStatus (state: StateInfo, effect: StatusEffect) {
   if (! (state instanceof ActiveState)) {
-    console.log ("[reduceStatus]", state)
+    console.error ("[reduceStatus]", state)
     throw new Error ("[reduceStatus] state not active")
   }
   
   const { edge } = state.peek()
 
-  let node = state.findNode (x => x.edge.equals (edge))
-  if (!node) throw new Error ("[reduceStatus] node not found")
+  const node = state.nodes.get (x => x.edge.equals (edge))
 
-  // TODO: This is not going to be true when we need to load args...
-  return (state
+  // TODO: Should we not have tasks?
+  return state
     .pop()
+    .tasks.without (x => x.edge.equals (edge))
     .withNode (node.withStatus (effect.status))
-  )
 }
 
 function reduceStatusAsync (state: StateInfo, effect: AsyncStatusEffect) {
-  // TODO: This is not going to be true when we need to load args...
-  const node = state.findNode (x => x.edge.equals (effect.edge))
+  // TODO: This is not going to work when we need to load args...
+  const node = state.nodes.get (x => x.edge.equals (effect.edge))
 
   if (! (node instanceof CleanNode)) {
-    console.log ("[reduceStatusAsync] not clean")
     throw new Error ("[reduceStatusAsync] not clean")
   }
 
@@ -846,9 +866,9 @@ const performUpdate = extendStore (async function* (
 })
 
 function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
-  let { func, args } = edge
+  const { func } = edge
 
-  args = args.map (arg => {
+  const args = edge.args.map (arg => {
     if (arg instanceof ValueParam) {
       return arg.value
     }
@@ -867,7 +887,7 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
         result = func (...args)
       }
 
-      console.log ("[reduceAtomAux] result", result)
+      // console.log ("[reduceAtomAux] result", result)
 
       if (! (result instanceof Promise)) {
         yield new StatusEffect (new Fulfilled (result))
@@ -890,38 +910,61 @@ function reduceAtom (state: StateInfo, effect: AtomEffect) {
   console.log ("reduceAtom")
 
   const edge = state.edgeOf (effect.atom)
-  const node = state.findNode (x => x.edge.equals (edge))
+  const node = state.nodes.find (x => x.edge.equals (edge))
+  const task = state.tasks.find (x => x.edge.equals (edge))
 
-  if (node instanceof CleanNode) {
+  if (task) {
+    if (!node) {
+      state = state.withNode (new DirtyNode (edge, []))
+    }
+    reduceAtomAux (effect, edge)
+    return state.push (task.id)
+  }
+  /*
+  else if (node instanceof DirtyNode) {
+    console.warn ("Unexpected dirty node w/o task")
+    return state
+  }
+  */
+  else if (node instanceof CleanNode) {
     console.log ("found status!", node.status)
     effect.return (node.status)
     return state
   }
-
-  const task = state.findTask (x => x.edge.equals (edge))
-  if (!task) {
-    console.log ("[reduceAtom]", state)
-    throw new Error ("[reduceAtom] task not found")
-  }
-
-  reduceAtomAux (effect, edge)
-  return (state
-    .push (task.id)
-    .withNode (new DirtyNode (edge, []))
-  )
+  
+  console.error ("[reduceAtom] no strategy", { edge, state })
+  throw new Error ("[reduceAtom] no strategy")
 }
 
 // #endregion
 
+abstract class PointerInfo {
+  atom = createAtom()
+}
+
+class EdgePointer extends PointerInfo {
+  constructor (
+    public readonly edge: EdgeInfo,
+  ) {
+    super()
+  }
+}
+
 // #region Entrypoints
 
-class EntryAtomInfo extends AtomInfo {
+class EntryPointer extends PointerInfo {
   constructor (
-    edge: EdgeInfo,
     public readonly id: string,
   ) {
-    super (edge)
+    super()
   }
+}
+
+class EntrypointInfo {
+  constructor (
+    public readonly id: string,
+    public readonly edge: CleanEdge,
+  ) {}
 }
 
 class EntrypointEffect extends Effect <Atom <any>> {
@@ -950,11 +993,13 @@ function reduceEntrypoint (
   state: StateInfo,
   effect: EntrypointEffect
 ): StateInfo {
-  const info = new EntryAtomInfo (effect.edge, effect.id)
-  state = state.withAtom (info)
+  const info = new EntryPointer (effect.id)
+  state = state.pointers.with (info)
+  state = state.entries.with (new EntrypointInfo (effect.id, effect.edge))
+
   effect.return (info.atom)
 
-  const data = state.findNode ((data) => {
+  const data = state.nodes.find ((data) => {
     return data.edge.equals (effect.edge)
   })
 
@@ -964,7 +1009,39 @@ function reduceEntrypoint (
 
 // #endregion
 
+// --- APIs ---
 
+// #region revalidate
+
+export function revalidate (atom: Atom <any>) {
+  handleEffectAsync (new RevalidateEffect (atom))
+  resyncAll()
+}
+
+class RevalidateEffect extends Effect <void> {
+  constructor (
+    public atom: Atom <any>,
+  ) {
+    super()
+  }
+}
+
+function reduceRevalidate (state: StateInfo, effect: RevalidateEffect) {
+  const edge = state.edgeOf (effect.atom)
+  const node = state.nodes.get (x => x.edge.equals (edge))
+
+  if (node instanceof DirtyNode) {
+    throw new Error ("Not implemented yet")
+    // state = state.nodes.without (x => x === node)
+    // state = state.tasks.without (x => x.edge.equals (edge))
+  }
+
+  const task = new TaskInfo (edge)
+  effect.return()
+  return state.withTask (task)
+}
+
+// #endregion
 
 // --- HOOKS ---
 
@@ -1013,8 +1090,7 @@ REDISPATCHER._use = extendStore (function* (factory: Func0) {
 function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
   const task = state.peek()
 
-  const node = state.findNode (x => x.edge.equals (task.edge))
-  if (!node) throw new Error ("[reduceUseStep] node not found")
+  const node = state.nodes.get (x => x.edge.equals (task.edge))
 
   if (node instanceof DirtyNode) {
     const value = effect.factory()
@@ -1365,5 +1441,3 @@ REDISPATCHER.useActionState = extendStore (function* (action: Func, init: any) {
 
 
 // #endregion
-
-
