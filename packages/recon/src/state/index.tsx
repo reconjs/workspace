@@ -1,4 +1,4 @@
-import { createEvent, Func, Func0, range, Subscribe, Vunc } from "@reconjs/utils"
+import { createEvent, Func, Func0, guidBy, range, Subscribe, Vunc } from "@reconjs/utils"
 import React, { DependencyList, memo, MemoExoticComponent, useEffect } from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
@@ -112,6 +112,14 @@ class Bunch <T> {
   without (predicate: (item: T) => boolean): Bunch <T> {
     const items = this.items.filter ((item) => !predicate (item))
     return new Bunch (items)
+  }
+
+  log (label: string) {
+    console.group (label)
+    for (const item of this.items) {
+      console.log (item)
+    }
+    console.groupEnd()
   }
 }
 
@@ -240,6 +248,17 @@ class StateInfo <S extends StateSelf = StateSelf> {
       tasks: this.self.tasks.with (task),
     })
   }
+
+  log () {
+    this.self.entries.log ("entries")
+    this.self.pointers.log ("pointers")
+    this.self.nodes.log ("nodes")
+    this.self.procs.log ("procs")
+    this.self.tasks.log ("tasks")
+    this.self.errors.log ("errors")
+  }
+
+  validate() {}
 }
 
 const INIT_STATE = new StateInfo ({
@@ -300,10 +319,13 @@ class ActiveState extends StateInfo <ActiveSelf>  {
   }
 
   push (id: symbol) {
+    const found = this.self.stack.find (x => x.task === id)
+    if (found) throw new Error ("[ActiveState] can't push")
+
     return this.build ({
       ...this.self,
       stack: [
-        new CallInfo (id, 0),
+        found ?? new CallInfo (id, 0),
         ...this.self.stack,
       ],
     })
@@ -323,6 +345,26 @@ class ActiveState extends StateInfo <ActiveSelf>  {
       stack: nextStack as List <CallInfo>,
       dispatcher,
     })
+  }
+
+  log () {
+    super.log()
+    console.log ("stack", this.self.stack)
+  }
+
+  validate () {
+    if (!this.self.dispatcher) {
+      throw new Error ("[ActiveState] no dispatcher")
+    }
+    if (!this.self.stack.length) {
+      throw new Error ("[ActiveState] no stack")
+    }
+
+    for (const { task } of this.self.stack) {
+      if (!this.self.tasks.find (x => x.id === task)) {
+        throw new Error ("[ActiveState] task (in stack) not found")
+      }
+    }
   }
 }
 
@@ -364,8 +406,7 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   if (effect instanceof UseAtomicEffect) {
     return reduceUseAtomic (state, effect)
   }
-
-  if (effect instanceof UseStepEffect) {
+  else if (effect instanceof UseStepEffect) {
     return reduceUseStep (state, effect)
   }
 
@@ -373,51 +414,91 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   throw new Error ("[reduceActiveState] Unknown effect")
 }
 
-const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
-  if (! (state instanceof StateInfo)) {
-    throw new Error ("NOT STATE INFO")
-  }
-  
+function reduceState (state: StateInfo, effect: Effect): StateInfo {
   if (effect instanceof InviewEndEffect) {
     return state
     // return reduceInviewEnd (state, effect)
   }
-
-  if (effect instanceof InviewStartEffect) {
+  else if (effect instanceof InviewStartEffect) {
     return state
     // return reduceInviewStart (state, effect)
   }
-
-  if (effect instanceof UseAtomicEffect) {
-    return reduceUseAtomic (state, effect)
-  }
-
-  if (effect instanceof EntrypointEffect) {
+  
+  else if (effect instanceof EntrypointEffect) {
     return reduceEntrypoint (state, effect)
   }
-
-  if (effect instanceof AtomEffect) {
+  else if (effect instanceof AtomEffect) {
     return reduceAtom (state, effect)
   }
-
-  if (effect instanceof StatusEffect) {
-    return reduceStatus (state, effect)
+  else if (effect instanceof UpdateEffect) {
+    return reduceUpdate (state, effect)
   }
-
-  if (effect instanceof AsyncStatusEffect) {
-    return reduceStatusAsync (state, effect)
+  else if (effect instanceof AsyncUpdateEffect) {
+    return reduceUpdateAsync (state, effect)
   }
-
-  if (effect instanceof RevalidateEffect) {
+  else if (effect instanceof RevalidateEffect) {
     return reduceRevalidate (state, effect)
   }
-
-  if (state instanceof ActiveState) {
+  else if (effect instanceof TaskEffect) {
+    return reduceTask (state, effect)
+  }
+  else if (state instanceof ActiveState) {
     return reduceActiveState (state, effect)
   }
-  
+
   console.error ("Unknown effect:", effect)
-  throw new Error ("[defineStore] Unknown effect")
+  throw new Error ("[reduceState] Unknown effect")
+}
+
+const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
+  if (! (state instanceof StateInfo)) {
+    throw new Error ("NOT STATE INFO")
+  }
+
+  let nextState = state
+
+  function dump (msg: string) {
+    console.error (msg)
+
+    console.group ("Prev State")
+    state.log()
+    console.groupEnd()
+
+    if (nextState !== state) {
+      console.group ("Next State")
+      nextState.log()
+      console.groupEnd()
+    }
+  }
+
+  console.group ("extendStore")
+  
+  
+  try {
+    console.log ("active:", state instanceof ActiveState)
+    console.log ("effect:", effect)
+
+    try {
+      nextState = reduceState (state, effect)
+    }
+    catch (err) {
+      dump ("error while reducing")
+      throw err
+    }
+
+    try {
+      nextState.validate()
+    }
+    catch (err) {
+      dump ("error while validating")
+      throw err
+    }
+
+    return nextState
+  }
+  finally {
+    console.groupEnd()
+  }
 })
 
 export function extendStore (...args: Parameters <typeof _extendStore>) {
@@ -646,7 +727,7 @@ class CallInfo {
 }
 
 class TaskInfo {
-  id = Symbol()
+  id = Symbol(`task:${guidBy({})}`)
 
   constructor (
     public readonly edge: EdgeInfo,
@@ -660,6 +741,19 @@ class RenderTask extends TaskInfo {
   ) {
     super (edge)
   }
+}
+
+class TaskEffect extends Effect <void> {
+  constructor (
+    public readonly id: symbol,
+  ) {
+    super()
+  }
+}
+
+function reduceTask (state: StateInfo, effect: TaskEffect) {
+  effect.return()
+  return state.push (effect.id)
 }
 
 // #endregion
@@ -703,7 +797,7 @@ class AtomEffect extends Effect <Status> {
   }
 }
 
-class StatusEffect extends Effect <void> {
+class UpdateEffect extends Effect <void> {
   constructor (
     public readonly status: Status
   ) {
@@ -711,7 +805,7 @@ class StatusEffect extends Effect <void> {
   }
 }
 
-class AsyncStatusEffect extends Effect <void> {
+class AsyncUpdateEffect extends Effect <void> {
   constructor (
     public readonly status: Status,
     public readonly edge: EdgeInfo,
@@ -721,12 +815,13 @@ class AsyncStatusEffect extends Effect <void> {
 }
 
 const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
-  console.group ("--- performLoadingOf ---")
+  console.group ("performLoadingOf")
 
   try {
+    // await Promise.resolve()
     for (const _ of loop ("performLoadingOf")) {
+      console.log ("it's loading time...")
       const status = yield* new AtomEffect (atom)
-      console.groupEnd()
 
       if (status instanceof Fulfilled) return
       if (status instanceof Rejected) throw status.reason
@@ -743,9 +838,8 @@ const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
 })
 
 const handleStatusOf = extendStore (function* (atom: Atom <any>) {
-  console.group ("handleStatusOf")
+  console.log ("handleStatusOf")
   const status = yield* new AtomEffect (atom)
-  console.groupEnd()
 
   if (status instanceof Fulfilled) return "fulfilled"
   if (status instanceof Rejected) return "rejected"
@@ -755,18 +849,16 @@ const handleStatusOf = extendStore (function* (atom: Atom <any>) {
 })
 
 const handleReasonOf = extendStore (function* (atom: Atom <any>) {
-  // console.group ("handleReasonOf")
+  console.log ("handleReasonOf")
   const status = yield* new AtomEffect (atom)
-  // console.groupEnd()
 
   if (status instanceof Rejected) return status.reason
   throw new Error ("Atom was not rejected")
 })
 
 const handleValueOf = extendStore (function* (atom: Atom <any>) {
-  console.group ("handleValueOf")
+  console.log ("handleValueOf")
   const status = yield* new AtomEffect (atom)
-  console.groupEnd()
 
   if (status instanceof Fulfilled) return status.value
   throw new Error ("Atom was not fulfilled")
@@ -820,12 +912,14 @@ function createAtom() {
   return atom
 }
 
-function reduceStatus (state: StateInfo, effect: StatusEffect) {
+function reduceUpdate (state: StateInfo, effect: UpdateEffect) {
+  effect.return()
+
   if (! (state instanceof ActiveState)) {
-    console.error ("[reduceStatus]", state)
-    throw new Error ("[reduceStatus] state not active")
+    console.error ("[reduceUpdate]", state)
+    throw new Error ("[reduceUpdate] state not active")
   }
-  
+
   const { edge } = state.peek()
 
   const node = state.nodes.get (x => x.edge.equals (edge))
@@ -837,12 +931,13 @@ function reduceStatus (state: StateInfo, effect: StatusEffect) {
     .withNode (node.withStatus (effect.status))
 }
 
-function reduceStatusAsync (state: StateInfo, effect: AsyncStatusEffect) {
+function reduceUpdateAsync (state: StateInfo, effect: AsyncUpdateEffect) {
+  effect.return()
   // TODO: This is not going to work when we need to load args...
   const node = state.nodes.get (x => x.edge.equals (effect.edge))
 
   if (! (node instanceof CleanNode)) {
-    throw new Error ("[reduceStatusAsync] not clean")
+    throw new Error ("[reduceUpdateAsync] not clean")
   }
 
   return state.withNode (node.withStatus (effect.status))
@@ -862,13 +957,13 @@ const performUpdate = extendStore (async function* (
     }
   })
 
-  yield new AsyncStatusEffect (status, edge)
+  yield* new AsyncUpdateEffect (status, edge)
 })
 
-function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
-  const { func } = edge
+function reduceAtomAux (effect: AtomEffect, task: TaskInfo) {
+  const { func } = task.edge
 
-  const args = edge.args.map (arg => {
+  const args = task.edge.args.map (arg => {
     if (arg instanceof ValueParam) {
       return arg.value
     }
@@ -879,6 +974,7 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
   effect.yield (function* () {
     try {
       let result: any
+      yield new TaskEffect (task.id)
       if (func instanceof GeneratorFunction) {
         // TODO: Intercept effects?
         result = yield* func (...args)
@@ -887,21 +983,21 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
         result = func (...args)
       }
 
-      // console.log ("[reduceAtomAux] result", result)
+      console.log ("[reduceAtomAux] result", result)
 
       if (! (result instanceof Promise)) {
-        yield new StatusEffect (new Fulfilled (result))
+        yield* new UpdateEffect (new Fulfilled (result))
       }
       else {
-        const promise = performUpdate (edge, result)
-        yield new StatusEffect (new Pending (promise))
+        const promise = performUpdate (task.edge, result)
+        yield* new UpdateEffect (new Pending (promise))
       }
     }
     catch (thrown) {
       if (thrown instanceof Promise) {
         // yield new SuspenseEffect()
       }
-      yield new StatusEffect (new Rejected (thrown))
+      yield* new UpdateEffect (new Rejected (thrown))
     }
   })
 }
@@ -917,8 +1013,8 @@ function reduceAtom (state: StateInfo, effect: AtomEffect) {
     if (!node) {
       state = state.withNode (new DirtyNode (edge, []))
     }
-    reduceAtomAux (effect, edge)
-    return state.push (task.id)
+    reduceAtomAux (effect, task)
+    return state
   }
   /*
   else if (node instanceof DirtyNode) {
@@ -1013,9 +1109,13 @@ function reduceEntrypoint (
 
 // #region revalidate
 
-export function revalidate (atom: Atom <any>) {
-  handleEffectAsync (new RevalidateEffect (atom))
+const _revalidate = extendStore (function* (atom: Atom <any>) {
+  yield* new RevalidateEffect (atom)
   resyncAll()
+})
+
+export function revalidate (atom: Atom <any>) {
+  _revalidate (atom)
 }
 
 class RevalidateEffect extends Effect <void> {
@@ -1198,9 +1298,7 @@ REDISPATCHER.useRef = extendStore (function* (current: any) {
 })
 
 function reduceUseRef (state: StateInfo, effect: UseRefEffect) {
-  const { current } = effect
-  const hook = new ValueInfo (Symbol(), current)
-  return state.withProc (hook)
+  throw new Error ("useRef not implemented yet")
 }
 
 // #endregion

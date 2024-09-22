@@ -1,4 +1,4 @@
-import { createEvent } from "@reconjs/utils"
+import { createEvent, createStore, Store } from "@reconjs/utils"
 import { useSyncExternalStore } from "react"
 
 function noop () {}
@@ -8,30 +8,27 @@ function doo <T> (func: () => T) {
 }
 
 
-
-type EventStore = ReturnType <typeof createEvent>
-
-const EVENTS = new Map <string, EventStore> ()
+const STORES = new Map <string, Store <symbol>> ()
 
 function eventOf (id: string) {
-  return EVENTS.get (id) || doo (() => {
-    const store = createEvent ()
-    EVENTS.set (id, store)
+  return STORES.get (id) || doo (() => {
+    const store = createStore (() => Symbol())
+    STORES.set (id, store)
     return store
   })
 }
 
 export function resyncAll () {
-  for (const store of EVENTS.values()) {
-    store.push()
+  for (const store of STORES.values()) {
+    store.dispatch (Symbol())
   }
 }
 
 export function resync (id: string) {
-  eventOf (id).push()
+  eventOf (id).dispatch (Symbol())
 }
 
 export function useResync (id: string) {
-  const { subscribe } = eventOf (id)
-  return useSyncExternalStore (subscribe, noop, noop)
+  const { subscribe, read } = eventOf (id)
+  return useSyncExternalStore (subscribe, read, read)
 }

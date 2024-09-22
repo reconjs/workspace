@@ -1,10 +1,15 @@
 import { render, screen, waitFor } from "@testing-library/react"
-import { act, Suspense, use, useEffect, useState } from "react"
+import { 
+  act, 
+  Suspense, 
+  use, 
+  useEffect, 
+  useState } from "react"
 // import { Regenerator, get$, use$ } from "recon"
 import { _use, atomic, revalidate } from "recon"
 import { vi, beforeEach, describe, expect, test } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
-import { createEvent } from "@reconjs/utils"
+import { PropsOf, useEvent } from "@reconjs/utils-react"
 
 expect.extend (matchers)
 
@@ -18,7 +23,8 @@ describe ("Alice -> Alicia", () => {
     return nameState
   })
   
-  function Name () {
+  function Name (props: any) {
+    console.log ("--- Name ---")
     const _name = useNameAtom()
     const name = use (_name)
 
@@ -33,12 +39,18 @@ describe ("Alice -> Alicia", () => {
       revalidate (_name)
     }
 
-    return <button onClick={onClick}>Switch</button>
+    return <button {...{ onClick }}>Switch</button>
   }
 
   function App () {
+    const [ symbol, setSymbol ] = useState (() => Symbol())
+
+    function onClick () {
+      setSymbol (() => Symbol())
+    }
+
     return <>
-      <Name />
+      <Name {...{ symbol }} />
       <SwitchName />
     </>
   }
@@ -59,9 +71,18 @@ describe ("Alice -> Alicia", () => {
   })
 
   test ("changes to Alicia", async () => {
-    act (() => {
-      screen.getByRole ("button").click()
+    await waitFor (() => {
+      expect (screen.getByRole ("heading"))
+        .toHaveTextContent ("Alice")
     })
+
+    console.group ("act")
+    act (() => {
+      console.group ("click")
+      screen.getByRole ("button").click()
+      console.groupEnd()
+    })
+    console.groupEnd()
 
     await waitFor (() => {
       expect (screen.getByRole ("heading"))
