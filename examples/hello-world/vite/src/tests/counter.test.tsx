@@ -60,7 +60,6 @@ describe ("Counter", () => {
 
       function onClick() {
         setCount (count + 1)
-        revalidate (_counter) // TODO: Should be automatic
       }
 
       return (

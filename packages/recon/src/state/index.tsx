@@ -1,5 +1,5 @@
-import { createEvent, Func, Func0, guidBy, range, Subscribe, Vunc } from "@reconjs/utils"
-import React, { DependencyList, memo, MemoExoticComponent, useEffect } from "react"
+import { createEvent, Func, Func0, guidBy, memoize, range, Subscribe, Vunc } from "@reconjs/utils"
+import React, { DependencyList, memo, MemoExoticComponent, useEffect, useState } from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
 import { GeneratorFunction } from "../types"
@@ -56,6 +56,7 @@ type ReconHooks = {
   _use: (func: Func) => any,
   useAtomic: (func: Func, ...args: any[]) => Atom <any>,
   useView: (render: Func) => AnyView,
+  useUpdate: () => VoidFunction,
 }
 
 export type ReactDispatcher = ReactHooks & Partial <ReconHooks>
@@ -224,6 +225,12 @@ class StateInfo <S extends StateSelf = StateSelf> {
     else {
       throw new Error ("[edgeOf] unknown pointer")
     }
+  }
+
+  findNodeByStep (step: symbol) {
+    return this.nodes.find ((node) => {
+      return node.has (step)
+    })
   }
 
   withNode (node: NodeInfo) {
@@ -409,6 +416,9 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   else if (effect instanceof UseStepEffect) {
     return reduceUseStep (state, effect)
   }
+  else if (effect instanceof UseUpdateEffect) {
+    return reduceUseUpdate (state, effect)
+  }
 
   console.error ("Unknown effect:", effect)
   throw new Error ("[reduceActiveState] Unknown effect")
@@ -442,6 +452,9 @@ function reduceState (state: StateInfo, effect: Effect): StateInfo {
   else if (effect instanceof TaskEffect) {
     return reduceTask (state, effect)
   }
+  else if (effect instanceof ForceUpdateEffect) {
+    return reduceForceUpdate (state, effect)
+  }
   else if (state instanceof ActiveState) {
     return reduceActiveState (state, effect)
   }
@@ -472,7 +485,6 @@ const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
   }
 
   console.group ("extendStore")
-  
   
   try {
     console.log ("active:", state instanceof ActiveState)
@@ -514,12 +526,12 @@ export const handleEffect = extendStore (function* (effect: Effect) {
     // handleCall (effect)
   }
   else {
-    yield* effect
+    return yield* effect
   }
 })
 
 export const handleEffectAsync = extendStore (async function* (effect: Effect) {
-  yield* effect
+  return yield* effect
 })
 
 
@@ -651,6 +663,29 @@ class CleanEdge extends EdgeInfo {
 
 // #endregion
 
+// #region Steps
+// for storing info within a node
+
+abstract class StepInfo {}
+
+class ValueStep extends StepInfo {
+  constructor (
+    public readonly current: any,
+  ) {
+    super()
+  }
+}
+
+class UpdateStep extends StepInfo {
+  readonly id = Symbol(`step:${guidBy({})}`)
+
+  constructor () {
+    super()
+  }
+}
+
+// #endregion
+
 // #region Nodes
 
 abstract class NodeInfo {
@@ -658,6 +693,10 @@ abstract class NodeInfo {
   protected abstract steps: StepInfo[]
 
   abstract withStatus (status: Status): CleanNode
+
+  has (step: symbol) {
+    return this.steps.some ((x) => x instanceof UpdateStep && x.id === step)
+  }
 }
 
 class DirtyNode extends NodeInfo {
@@ -1168,13 +1207,6 @@ const NEVER = doo (() => {
   return new Never() as any
 })
 
-// for storing info within a node
-class StepInfo {
-  constructor (
-    public readonly current: any,
-  ) {}
-}
-
 export class UseStepEffect extends Effect <any> {
   constructor (
     public factory: Func0,
@@ -1194,7 +1226,7 @@ function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
 
   if (node instanceof DirtyNode) {
     const value = effect.factory()
-    state = node.withStep (state, new StepInfo (value))
+    state = node.withStep (state, new ValueStep (value))
 
     effect.return (value)
     return state.next()
@@ -1203,7 +1235,7 @@ function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
   else if (node instanceof CleanNode) {
     const step = node.step (state.step)
 
-    if (! (step instanceof StepInfo)) {
+    if (! (step instanceof ValueStep)) {
       throw new Error ("[reduceUseStep] step not found")
     }
 
@@ -1235,8 +1267,94 @@ export function _use <T> (factory: () => T): T {
 
 // #endregion
 
+// #region useUpdate
 
-// #region Recon Hooks
+class UseUpdateEffect extends Effect <symbol> {
+  constructor () {
+    super()
+  }
+}
+
+class ForceUpdateEffect extends Effect <void> {
+  constructor (
+    public readonly step: symbol,
+  ) {
+    super()
+  }
+}
+
+const forceUpdateBy = memoize ((step: symbol) => {
+  return function forceUpdate () {
+    handleEffect (new ForceUpdateEffect (step))
+    resyncAll()
+  }
+})
+
+REDISPATCHER.useUpdate = function _useUpdate () {
+  const id = handleEffect (new UseUpdateEffect())
+  return forceUpdateBy (id)
+}
+
+function reduceForceUpdate (state: StateInfo, effect: ForceUpdateEffect) {
+  const { step } = effect
+  const node = state.findNodeByStep (step)
+  console.log ("found node", node)
+
+  if (! (node instanceof CleanNode)) {
+    throw new Error ("Can't update dirty node")
+    // state = state.nodes.without (x => x === node)
+    // state = state.tasks.without (x => x.edge.equals (edge))
+  }
+
+  const task = new TaskInfo (node.edge)
+  effect.return()
+  return state.withTask (task)
+}
+
+function reduceUseUpdate (state: ActiveState, effect: UseUpdateEffect) {
+  const task = state.peek()
+
+  const node = state.nodes.get (x => x.edge.equals (task.edge))
+
+  if (node instanceof DirtyNode) {
+    const step = new UpdateStep()
+    state = node.withStep (state, step)
+
+    effect.return (step.id)
+    return state.next()
+  }
+  else if (node instanceof CleanNode) {
+    const step = node.step (state.step)
+
+    if (! (step instanceof UpdateStep)) {
+      throw new Error ("[reduceUseUpdate] step not found")
+    }
+
+    effect.return (step.id)
+    return state.next()
+  }
+
+  throw new Error ("[reduceUseUpdate] unknown node")
+}
+
+export function useUpdate () {
+  const dispatcher = Dispatcher.current
+  if (!dispatcher) throw new Error ("[useUpdate] no dispatcher")
+
+  const { useUpdate } = dispatcher
+  if (useUpdate) return useUpdate() // eslint-disable-line
+
+  // eslint-disable-next-line
+  const [ _, setSymbol ] = useState (() => Symbol())
+
+  return _use (() => () => {
+    setSymbol (() => Symbol())
+  })
+}
+
+// #endregion
+
+// #region useAtomic
 
 export class UseAtomicEffect extends Effect <Atom <any>> {
   constructor (
@@ -1251,23 +1369,21 @@ REDISPATCHER.useAtomic = extendStore (function* (func: Func, ...args: any[]) {
   return yield* new UseAtomicEffect (func, args)
 })
 
-function reduceUseAtomic (state: StateInfo, effect: UseAtomicEffect) {
-  const infos = effect.args.map (x => new ValueParam (x))
-
-  if (! (state instanceof ActiveState)) {
-    throw new Error ("[reduceUseAtomic] not active")
-  }
+function reduceUseAtomic (state: ActiveState, effect: UseAtomicEffect) {
+  const args = effect.args.map (x => new ValueParam (x))
 
   const prev = state.peek()
   // TODO: EdgeInfo
-  const edge = new CleanEdge (prev.edge.scope, effect.func, infos)
+  const edge = new CleanEdge (prev.edge.scope, effect.func, args)
 
   // TODO: If we have data, we don't need to create a task, right?
   const task = new TaskInfo (edge)
   return state.withTask (task)
 }
 
+// #endregion
 
+// #region useView
 
 export class UseViewEffect extends Effect <MemoExoticComponent <any>> {
   constructor (
@@ -1327,18 +1443,18 @@ function reduceUseReducer (state: StateInfo, effect: UseReducerEffect) {
 // #region useState
 
 REDISPATCHER.useState = function useState (initial: any) {
+  const update = useUpdate()
+
   const ref = _use (() => {
     const state = typeof initial === "function" ? initial() : initial
     return { state }
   })
 
-  const setState = _use (() => (update: any) => {
-    if (typeof update === "function") {
-      ref.state = update (ref.state)
-    }
-    else {
-      ref.state = update
-    }
+  const setState = _use (() => (arg: any) => {
+    ref.state = typeof arg === "function" 
+      ? arg (ref.state)
+      : arg
+    return update()
   })
 
   return [ ref.state, setState ]
