@@ -1130,6 +1130,8 @@ function reduceEntrypoint (
 ): StateInfo {
   const info = new EntryPointer (effect.id)
   state = state.pointers.with (info)
+
+  state = state.entries.without (x => x.id === effect.id)
   state = state.entries.with (new EntrypointInfo (effect.id, effect.edge))
 
   effect.return (info.atom)

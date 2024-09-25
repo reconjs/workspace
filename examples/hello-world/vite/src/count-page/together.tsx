@@ -1,7 +1,17 @@
-import { use$ } from "recon"
-import { Counter$, $Section } from "./counter"
+import { Counter, } from "./counter"
 import { PropsOf } from "@reconjs/utils-react"
 
+export function Together (props: PropsOf <"div">) {
+  return <>
+    <h1>Counters that update together</h1>
+    <div {...props}>
+      <Counter />
+      <Counter />
+    </div>
+  </>
+}
+
+/*
 function* Left$ () {
   const Counter = use$ (Counter$)
   return () => <Counter />
@@ -12,7 +22,7 @@ function* Right$ () {
   return () => <Counter />
 }
 
-export function* Together$ () {
+export function* Together () {
   yield $Section (() => null)
   
   const Left = use$ (Left$)
@@ -26,3 +36,4 @@ export function* Together$ () {
     </div>
   </>
 }
+*/

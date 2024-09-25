@@ -1,9 +1,16 @@
-import { useState } from "react"
-import { context, use$ } from "recon"
+import { Func } from "@reconjs/utils"
+import { use, useState } from "react"
+import { atomic } from "recon"
 
-export const $Section = context (() => {
-  return null
-})
+export function useSectionScope (func: Func) {}
+export function useSectionAtom () {}
+
+// const [
+//   useSectionAtom,
+//   useSectionScope,
+// ] = scope (() => {
+//   return null
+// })
 
 function getCounterClass (color: string) {
   const flex = "flex flex-row items-center justify-center"
@@ -41,35 +48,32 @@ function BasicCounter (props: {
 
 
 
-let loadingCount = 0
+// let loadingCount = 0
+//
+// const useInitialCount = atomic (async () => {
+//   if (loadingCount++ > 10) throw new Error ("Should not be loading so much")
+//   await timeout (1000)
+//   return 0
+// })
 
-function* initialCount$ () {
-  if (loadingCount++ > 10) throw new Error ("Should not be loading so much")
-  return use$ (async () => {
-    
-    await timeout (1000)
-    return 0
-  })
-}
-
-const initialCount = 0
-// const count = 0
-// const setCount = (num: number) => {}
-
-function* countState$ () {
-  const section = yield* $Section()
-  const initialCount = yield* use$ (initialCount$)
+const useCountStateAtom = atomic (() => {
+  useSectionAtom()
+  // const _initial = useInitialCount()
+  // const initial = use (_initial)
+  const initial = 0
   
-  return use$ (() => {
-    const [ count, setCount ] = useState (initialCount)
-    return { count, setCount }
-  })
-}
+  const [ count, setCount ] = useState (initial)
+  return { count, setCount }
+})
 
-export function* Counter$ () {
-  const { count, setCount } = yield* use$ (countState$)
+export function Counter () {
+  const _state = useCountStateAtom()
+  const { count, setCount } = use (_state)
   
-  return () => (
+  return (
     <BasicCounter count={count} setCount={setCount} />
   )
 }
+
+// This disables react-refresh from running and ruining everything.
+export const COUNTER_SYMBOL = Symbol()

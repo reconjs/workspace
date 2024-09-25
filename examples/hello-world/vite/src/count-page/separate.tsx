@@ -1,7 +1,18 @@
-import { use$ } from "recon"
-import { $Section, Counter$ } from "./counter"
+import { atomic } from "recon"
+import { Counter } from "./counter"
 import { PropsOf } from "@reconjs/utils-react"
 
+export function Separate (props: PropsOf <"div">) {
+  return <>
+    <h1>Counters that update separately</h1>
+    <div {...props}>
+      <Counter />
+      <Counter />
+    </div>
+  </>
+}
+
+/*
 function* Left$ () {
   yield $Section (() => null)
   
@@ -28,3 +39,4 @@ export function* Separate$ () {
     </div>
   </>
 }
+*/

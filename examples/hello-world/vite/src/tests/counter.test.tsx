@@ -11,7 +11,7 @@ expect.extend (matchers)
 
 describe ("Counter", () => {
   // FIXME: `useView` is not implemented yet.
-  test.skip ("Counter (local)", async () => {
+  test.todo ("Counter (local)", async () => {
     const useCounterView = atomic (() => {
       const [ count, setCount ] = useState (0)
 
@@ -95,4 +95,57 @@ describe ("Counter", () => {
     })
   })
 
+  describe.todo ("Counter (shared + async)", () => {
+    const useInitialCount = atomic (async () => {
+      return 0
+    })
+
+    const useCounterAtom = atomic (() => {
+      const _initial = useInitialCount()
+      const initial = use (_initial)
+
+      const [ count, setCount ] = useState (initial)
+      return { count, setCount }
+    })
+
+    function Counter ({ label }: any) {
+      const _counter = useCounterAtom()
+      const { count, setCount } = use (_counter)
+
+      function onClick() {
+        setCount (count + 1)
+      }
+
+      return (
+        <button onClick={onClick}>
+          {label}: {count}
+        </button>
+      )
+    }
+
+    function App() {
+      return <>
+        <Counter label="First" />
+        <Counter label="Second" />
+      </>
+    }
+    
+    beforeEach (() => {
+      render (<App />)
+    })
+
+    test ("0 clicks", async () => {
+      expect (screen.getByText ("First: 0")).toBeVisible()
+      expect (screen.getByText ("Second: 0")).toBeVisible()
+    })
+
+    test ("1 click", async () => {
+      act (() => {
+        screen.getAllByRole("button")[0].click?.()
+      })
+
+      expect (screen.queryByText ("First: 1")).toBeVisible()
+      expect (screen.queryByText ("Second: 1")).toBeVisible()
+    })
+  })
 })

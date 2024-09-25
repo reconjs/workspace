@@ -1,10 +1,29 @@
 import "./index.css"
 
 import { createRoot } from "react-dom/client"
-import { Root } from "./faux-root"
+import { Suspense } from "react"
+import { useView } from "recon"
+import { Layout } from "./layout"
+import { Page } from "./count-page"
 
-const rootEl = document.getElementById('root')
+const ROOT = document.getElementById('root')!
 
-createRoot (rootEl!).render(
-  <Root />
+const loading = (
+  <div className="p-8 text-center">
+    ... Loading ...
+  </div>
 )
+
+export function App () {
+  return (
+    <Suspense fallback={loading}>
+      <Layout>
+        <Suspense fallback={loading}>
+          <Page />
+        </Suspense>
+      </Layout>
+    </Suspense>
+  )
+}
+
+createRoot (ROOT).render(<App />)
