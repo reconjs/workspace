@@ -57,6 +57,9 @@ export function defineStore <T> (
         }
       }
       catch (error) {
+        console.group ("[defineAsyncAction] ERROR; state:")
+        if (typeof state.log === "function") state.log()
+        console.groupEnd()
         faulty.throw (error)
       }
     }

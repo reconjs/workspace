@@ -1,5 +1,10 @@
-import { createEvent, Func, Func0, guidBy, memoize, range, Subscribe, Vunc } from "@reconjs/utils"
-import React, { DependencyList, memo, MemoExoticComponent, useEffect, useState } from "react"
+import { Func, Func0, guidBy, loadPromise, memoize, range, Vunc } from "@reconjs/utils"
+import React, { 
+  DependencyList, 
+  memo, 
+  MemoExoticComponent, 
+  useState,
+} from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
 import { GeneratorFunction } from "../types"
@@ -160,6 +165,7 @@ type StateSelf = {
   pointers: Bunch <PointerInfo>,
   nodes: Bunch <NodeInfo>,
   procs: Bunch <ProcInfo>,
+  suspenses: Bunch <SuspenseInfo>,
   tasks: Bunch <TaskInfo>,
   errors: Bunch <Error>,
 }
@@ -200,6 +206,11 @@ class StateInfo <S extends StateSelf = StateSelf> {
   get procs() {
     return substate (() => this.self.procs)
       .withBuild ((procs) => this.build ({ ...this.self, procs }))
+  }
+
+  get suspenses () {
+    return substate (() => this.self.suspenses)
+      .withBuild ((suspenses) => this.build ({ ...this.self, suspenses }))
   }
 
   get tasks() {
@@ -261,6 +272,7 @@ class StateInfo <S extends StateSelf = StateSelf> {
     this.self.pointers.log ("pointers")
     this.self.nodes.log ("nodes")
     this.self.procs.log ("procs")
+    this.self.suspenses.log ("suspenses")
     this.self.tasks.log ("tasks")
     this.self.errors.log ("errors")
   }
@@ -273,6 +285,7 @@ const INIT_STATE = new StateInfo ({
   pointers: EMPTY,
   nodes: EMPTY,
   procs: EMPTY,
+  suspenses: EMPTY,
   tasks: EMPTY,
   errors: EMPTY,
 })
@@ -419,6 +432,9 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   else if (effect instanceof UseUpdateEffect) {
     return reduceUseUpdate (state, effect)
   }
+  else if (effect instanceof SuspenseEffect) {
+    return reduceSuspense (state, effect)
+  }
 
   console.error ("Unknown effect:", effect)
   throw new Error ("[reduceActiveState] Unknown effect")
@@ -454,6 +470,9 @@ function reduceState (state: StateInfo, effect: Effect): StateInfo {
   }
   else if (effect instanceof ForceUpdateEffect) {
     return reduceForceUpdate (state, effect)
+  }
+  else if (effect instanceof UnsuspenseEffect) {
+    return reduceUnsuspense (state, effect)
   }
   else if (state instanceof ActiveState) {
     return reduceActiveState (state, effect)
@@ -797,6 +816,53 @@ function reduceTask (state: StateInfo, effect: TaskEffect) {
 
 // #endregion
 
+// #region Suspense
+
+class SuspenseInfo {
+  constructor (
+    public readonly task: symbol,
+    public readonly status: Pending,
+  ) {}
+}
+
+class UnsuspenseEffect extends Effect <void> {
+  constructor (
+    public readonly task: symbol,
+  ) {
+    super()
+  }
+}
+
+class SuspenseEffect extends Effect <void> {
+  constructor (
+    public readonly status: Pending,
+  ) {
+    super()
+  }
+}
+
+function reduceUnsuspense (state: StateInfo, effect: UnsuspenseEffect) {
+  effect.return()
+  return state.suspenses.without (x => x.task === effect.task)
+}
+
+function reduceSuspense (state: ActiveState, effect: SuspenseEffect) {
+  const task = state.peek()
+  effect.return()
+
+  effect.status.promise.then (() => {
+    handleEffect (new UnsuspenseEffect (task.id))
+  })
+
+  // TODO: Should we not have tasks?
+  return state.pop()
+    .suspenses.with (new SuspenseInfo (task.id, effect.status))
+    .nodes.without (x => x.edge.equals (task.edge) && x instanceof DirtyNode)
+}
+
+// #endregion
+
+
 // #region Atoms
 
 /**
@@ -1034,9 +1100,12 @@ function reduceAtomAux (effect: AtomEffect, task: TaskInfo) {
     }
     catch (thrown) {
       if (thrown instanceof Promise) {
-        // yield new SuspenseEffect()
+        const status = new Pending (thrown)
+        yield* new SuspenseEffect (status)
       }
-      yield* new UpdateEffect (new Rejected (thrown))
+      else {
+        yield* new UpdateEffect (new Rejected (thrown))
+      }
     }
   })
 }
@@ -1049,6 +1118,13 @@ function reduceAtom (state: StateInfo, effect: AtomEffect) {
   const task = state.tasks.find (x => x.edge.equals (edge))
 
   if (task) {
+    const suspended = state.suspenses.find (x => x.task === task.id)
+    if (suspended) {
+      console.log ("[reduceAtom] suspended")
+      effect.return (suspended.status)
+      return state
+    }
+
     if (!node) {
       state = state.withNode (new DirtyNode (edge, []))
     }
@@ -1136,11 +1212,8 @@ function reduceEntrypoint (
 
   effect.return (info.atom)
 
-  const data = state.nodes.find ((data) => {
-    return data.edge.equals (effect.edge)
-  })
-
-  if (data) return state
+  const found = state.nodes.find (x => x.edge.equals (effect.edge))
+  if (found) return state
   return state.withTask (new TaskInfo (effect.edge))
 }
 
@@ -1188,6 +1261,7 @@ function reduceRevalidate (state: StateInfo, effect: RevalidateEffect) {
 
 // #region use
 
+/*
 export class UseEffect extends Effect <any> {
   constructor (
     public usable: any,
@@ -1199,6 +1273,11 @@ export class UseEffect extends Effect <any> {
 REDISPATCHER.use = extendStore (function* (usable: any) {
   return yield* new UseEffect (usable)
 })
+*/
+
+REDISPATCHER.use = function use (usable: any) {
+  return loadPromise (usable)
+}
 
 // #endregion
 
@@ -1371,16 +1450,23 @@ REDISPATCHER.useAtomic = extendStore (function* (func: Func, ...args: any[]) {
   return yield* new UseAtomicEffect (func, args)
 })
 
-function reduceUseAtomic (state: ActiveState, effect: UseAtomicEffect) {
-  const args = effect.args.map (x => new ValueParam (x))
+function reduceUseAtomic (state: StateInfo, effect: UseAtomicEffect) {
+  if (! (state instanceof ActiveState)) {
+    throw new Error ("[reduceUseAtomic] not active")
+  }
 
   const prev = state.peek()
-  // TODO: EdgeInfo
+
+  const args = effect.args.map (x => new ValueParam (x))
   const edge = new CleanEdge (prev.edge.scope, effect.func, args)
 
-  // TODO: If we have data, we don't need to create a task, right?
-  const task = new TaskInfo (edge)
-  return state.withTask (task)
+  const pointer = new EdgePointer (edge)
+  state = state.pointers.with (pointer)
+  effect.return (pointer.atom)
+
+  const found = state.nodes.find (x => x.edge.equals (edge))
+  if (found) return state
+  else return state.withTask (new TaskInfo (edge))
 }
 
 // #endregion

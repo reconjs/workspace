@@ -9,6 +9,8 @@ import * as matchers from "@testing-library/jest-dom/matchers"
 
 expect.extend (matchers)
 
+const loading = <h1>Loading...</h1>
+
 describe ("Counter", () => {
   // FIXME: `useView` is not implemented yet.
   test.todo ("Counter (local)", async () => {
@@ -54,7 +56,7 @@ describe ("Counter", () => {
       return { count, setCount }
     })
 
-    function Counter ({ label }: any) {
+    function Counter (props: any) {
       const _counter = useCounterAtom()
       const { count, setCount } = use (_counter)
 
@@ -63,16 +65,16 @@ describe ("Counter", () => {
       }
 
       return (
-        <button onClick={onClick}>
-          {label}: {count}
+        <button {...props} onClick={onClick}>
+          Count is {count}
         </button>
       )
     }
 
     function App() {
       return <>
-        <Counter label="First" />
-        <Counter label="Second" />
+        <Counter data-testid="one" />
+        <Counter data-testid="two" />
       </>
     }
     
@@ -81,8 +83,8 @@ describe ("Counter", () => {
     })
 
     test ("0 clicks", async () => {
-      expect (screen.getByText ("First: 0")).toBeVisible()
-      expect (screen.getByText ("Second: 0")).toBeVisible()
+      expect (screen.getByTestId ("one")).toHaveTextContent ("Count is 0")
+      expect (screen.getByTestId ("two")).toHaveTextContent ("Count is 0")
     })
 
     test ("1 click", async () => {
@@ -90,12 +92,85 @@ describe ("Counter", () => {
         screen.getAllByRole("button")[0].click?.()
       })
 
-      expect (screen.queryByText ("First: 1")).toBeVisible()
-      expect (screen.queryByText ("Second: 1")).toBeVisible()
+      expect (screen.getByTestId ("one")).toHaveTextContent ("Count is 1")
+      expect (screen.getByTestId ("two")).toHaveTextContent ("Count is 1")
     })
   })
 
-  describe.todo ("Counter (shared + async)", () => {
+  describe ("Counter (shared + sync)", () => {
+    const useInitialCount = atomic (() => {
+      return 0
+    })
+
+    const useCounterAtom = atomic (() => {
+      const _initial = useInitialCount()
+      const initial = use (_initial)
+
+      const [ count, setCount ] = useState (initial)
+      return { count, setCount }
+    })
+
+    function Counter (props: any) {
+      const _counter = useCounterAtom()
+      const { count, setCount } = use (_counter)
+
+      function onClick() {
+        setCount (count + 1)
+      }
+
+      return (
+        <button {...props} onClick={onClick}>
+          Count is {count}
+        </button>
+      )
+    }
+
+    function App() {
+      return <>
+        <h1>Counters</h1>
+        <Counter data-testid="one" />
+        <Counter data-testid="two" />
+      </>
+    }
+    
+    beforeEach (() => {
+      render (
+        <Suspense fallback={loading}>
+          <App />
+        </Suspense>
+      )
+    })
+
+    test ("does not suspend", () => {
+      expect (screen.getByRole ("heading")).not.toHaveTextContent ("Loading...")
+    })
+
+    test ("0 clicks", async () => {
+      await waitFor (() => {
+        expect (screen.getByRole ("heading")).toHaveTextContent ("Counters")
+      })
+
+      expect (screen.getByTestId ("one")).toHaveTextContent ("Count is 0")
+      expect (screen.getByTestId ("two")).toHaveTextContent ("Count is 0")
+    })
+
+    test ("1 click", async () => {
+      await waitFor (() => {
+        expect (screen.getByRole ("heading")).toHaveTextContent ("Counters")
+      })
+
+      act (() => {
+        screen.getByTestId ("one").click?.()
+      })
+
+      expect (await screen.findByTestId ("one"))
+        .toHaveTextContent ("Count is 1")
+      expect (await screen.findByTestId ("two"))
+        .toHaveTextContent ("Count is 1")
+    })
+  })
+
+  describe ("Counter (shared + async)", () => {
     const useInitialCount = atomic (async () => {
       return 0
     })
@@ -108,7 +183,7 @@ describe ("Counter", () => {
       return { count, setCount }
     })
 
-    function Counter ({ label }: any) {
+    function Counter (props: any) {
       const _counter = useCounterAtom()
       const { count, setCount } = use (_counter)
 
@@ -117,35 +192,54 @@ describe ("Counter", () => {
       }
 
       return (
-        <button onClick={onClick}>
-          {label}: {count}
+        <button {...props} onClick={onClick}>
+          Count is {count}
         </button>
       )
     }
 
     function App() {
       return <>
-        <Counter label="First" />
-        <Counter label="Second" />
+        <h1>Counters</h1>
+        <Counter data-testid="one" />
+        <Counter data-testid="two" />
       </>
     }
     
     beforeEach (() => {
-      render (<App />)
+      render (
+        <Suspense fallback={loading}>
+          <App />
+        </Suspense>
+      )
+    })
+
+    test ("suspends", () => {
+      expect (screen.getByRole ("heading")).toHaveTextContent ("Loading...")
     })
 
     test ("0 clicks", async () => {
-      expect (screen.getByText ("First: 0")).toBeVisible()
-      expect (screen.getByText ("Second: 0")).toBeVisible()
+      await waitFor (() => {
+        expect (screen.getByRole ("heading")).toHaveTextContent ("Counters")
+      })
+
+      expect (screen.getByTestId ("one")).toHaveTextContent ("Count is 0")
+      expect (screen.getByTestId ("two")).toHaveTextContent ("Count is 0")
     })
 
     test ("1 click", async () => {
-      act (() => {
-        screen.getAllByRole("button")[0].click?.()
+      await waitFor (() => {
+        expect (screen.getByRole ("heading")).toHaveTextContent ("Counters")
       })
 
-      expect (screen.queryByText ("First: 1")).toBeVisible()
-      expect (screen.queryByText ("Second: 1")).toBeVisible()
+      act (() => {
+        screen.getByTestId ("one").click?.()
+      })
+
+      expect (await screen.findByTestId ("one"))
+        .toHaveTextContent ("Count is 1")
+      expect (await screen.findByTestId ("two"))
+        .toHaveTextContent ("Count is 1")
     })
   })
 })
