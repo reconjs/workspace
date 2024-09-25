@@ -1,6 +1,7 @@
 import { Func, Vunc } from "@reconjs/utils"
 import { AsyncGeneratorFunction, Prac, Returns } from "../types"
 import { Effect } from "../effect"
+import { faulty } from "./fault"
 
 type Reproc = (...args: any[]) => Generator <Effect, any>
 type Reprac = (...args: any[]) => AsyncGenerator <Effect, any>
@@ -23,8 +24,6 @@ const NEVER = doo(() => {
   return res
 })
 
-let FAILED = false
-
 export function defineStore <T> (
   initialState: T,
   reducer: (state: T, effect: Effect) => T,
@@ -33,7 +32,7 @@ export function defineStore <T> (
   
   function defineAsyncAction (prac: Reprac) {
     return async function call$ (...args: any[]) {
-      if (FAILED) throw new Error ("Failure")
+      faulty.try()
 
       const iter = prac (...args)
       
@@ -58,15 +57,14 @@ export function defineStore <T> (
         }
       }
       catch (error) {
-        console.error ("ASYNC ERROR", error)
-        FAILED = true
+        faulty.throw (error)
       }
     }
   }
   
   function defineSyncAction (proc: Reproc) {
     return function call (...args: any[]) {
-      if (FAILED) throw new Error ("Failure")
+      faulty.try()
 
       const iter = proc (...args)
       
@@ -91,8 +89,10 @@ export function defineStore <T> (
         }
       }
       catch (error) {
-        console.error ("SYNC ERROR", error)
-        FAILED = true
+        console.group ("[defineSyncAction] ERROR; state:")
+        if (typeof state.log === "function") state.log()
+        console.groupEnd()
+        faulty.throw (error)
       }
     }
   }

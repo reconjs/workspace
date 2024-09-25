@@ -1,10 +1,12 @@
-import { Func, Func0, range, Vunc } from "@reconjs/utils"
-import React, { DependencyList, memo, MemoExoticComponent } from "react"
+import { createEvent, Func, Func0, guidBy, memoize, range, Subscribe, Vunc } from "@reconjs/utils"
+import React, { DependencyList, memo, MemoExoticComponent, useEffect, useState } from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
 import { GeneratorFunction } from "../types"
 import { AnyView } from "../use-view"
 import { Atom } from "../atomic"
+import { faulty } from "./fault"
+import { resyncAll } from "../resync"
 
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
@@ -54,6 +56,7 @@ type ReconHooks = {
   _use: (func: Func) => any,
   useAtomic: (func: Func, ...args: any[]) => Atom <any>,
   useView: (render: Func) => AnyView,
+  useUpdate: () => VoidFunction,
 }
 
 export type ReactDispatcher = ReactHooks & Partial <ReconHooks>
@@ -76,7 +79,7 @@ const COMPONENT_TYPE = doo (() => {
 // @ts-ignore
 const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
 if (!internals) {
-  // console.log (Object.keys (React))
+  console.log (Object.keys (React))
   throw new Error ("INTERNALS NOT FOUND")
 }
 
@@ -88,10 +91,6 @@ export const Dispatcher = {
     internals.H = dispatcher
   }
 }
-
-
-
-
 
 
 
@@ -115,13 +114,51 @@ class Bunch <T> {
     const items = this.items.filter ((item) => !predicate (item))
     return new Bunch (items)
   }
+
+  log (label: string) {
+    console.group (label)
+    for (const item of this.items) {
+      console.log (item)
+    }
+    console.groupEnd()
+  }
+}
+
+function substate <T> (read: () => Bunch <T>) {
+  function withBuild <S> (build: (bunch: Bunch <T>) => S) {
+    return {
+      get: (predicate: (item: T) => boolean) => {
+        const bunch = read()
+        const found = bunch.find (predicate)
+        if (!found) throw new Error ("[get] not found")
+        return found
+      },
+      find: (predicate: (item: T) => boolean) => {
+        const bunch = read()
+        return bunch.find (predicate)
+      },
+      with: (item: T) => {
+        const bunch = read()
+        return build (bunch.with (item))
+      },
+      without: (predicate: (item: T) => boolean) => {
+        const bunch = read ()
+        return build (bunch.without (predicate))
+      },
+    }
+  }
+
+  return {
+    withBuild,
+  }
 }
 
 const EMPTY = new Bunch <any> ([])
 
 type StateSelf = {
-  atoms: Bunch <AtomInfo>,
-  datas: Bunch <DataInfo>,
+  entries: Bunch <EntrypointInfo>,
+  pointers: Bunch <PointerInfo>,
+  nodes: Bunch <NodeInfo>,
   procs: Bunch <ProcInfo>,
   tasks: Bunch <TaskInfo>,
   errors: Bunch <Error>,
@@ -130,7 +167,7 @@ type StateSelf = {
 class StateInfo <S extends StateSelf = StateSelf> {
   constructor (protected readonly self: S) {}
 
-  build (self: S) {
+  protected build (self: S) {
     return new StateInfo <S> (self)
   }
 
@@ -141,76 +178,70 @@ class StateInfo <S extends StateSelf = StateSelf> {
     return new ActiveState ({
       ...this.self,
       dispatcher,
-      stack: [ id ],
+      stack: [ new CallInfo (id, 0) ],
     })
+  }
+
+  get entries() {
+    return substate (() => this.self.entries)
+      .withBuild ((entries) => this.build ({ ...this.self, entries }))
+  }
+
+  get pointers() {
+    return substate (() => this.self.pointers)
+      .withBuild ((pointers) => this.build ({ ...this.self, pointers }))
+  }
+
+  get nodes() {
+    return substate (() => this.self.nodes)
+      .withBuild ((nodes) => this.build ({ ...this.self, nodes }))
+  }
+
+  get procs() {
+    return substate (() => this.self.procs)
+      .withBuild ((procs) => this.build ({ ...this.self, procs }))
+  }
+
+  get tasks() {
+    return substate (() => this.self.tasks)
+      .withBuild ((tasks) => this.build ({ ...this.self, tasks }))
+  }
+
+  get errors() {
+    return substate (() => this.self.errors)
+      .withBuild ((errors) => this.build ({ ...this.self, errors }))
   }
 
   edgeOf (atom: Atom <any>) {
-    const info = this.findAtom ((x) => x.atom === atom)
-    if (!info) throw new Error ("[edgeOf] atom not found")
-    return info.edge
+    const pointer = this.pointers.get ((x) => x.atom === atom)
+
+    if (pointer instanceof EdgePointer) {
+      return pointer.edge
+    }
+    else if (pointer instanceof EntryPointer) {
+      const entry = this.entries.get ((x) => x.id === pointer.id)
+      return entry.edge
+    }
+    else {
+      throw new Error ("[edgeOf] unknown pointer")
+    }
   }
 
-  findAtom (predicate: (atom: AtomInfo) => boolean) {
-    return this.self.atoms.find (predicate)
-  }
-
-  findData (predicate: (data: DataInfo) => boolean) {
-    return this.self.datas.find (predicate)
-  }
-
-  findProc (predicate: (proc: ProcInfo) => boolean) {
-    return this.self.procs.find (predicate)
-  }
-
-  findTask (predicate: (task: TaskInfo) => boolean) {
-    return this.self.tasks.find (predicate)
-  }
-
-  withAtom (atom: AtomInfo) {
-    return this.build ({
-      ...this.self,
-      atoms: this.self.atoms.with (atom),
+  findNodeByStep (step: symbol) {
+    return this.nodes.find ((node) => {
+      return node.has (step)
     })
   }
 
-  withoutAtom (predicate: (atom: AtomInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      atoms: this.self.atoms.without (predicate),
-    })
-  }
-
-  withData (data: DataInfo) {
-    const found = this.self.datas
-      .find ((x) => x.edge.equals (data.edge))
+  withNode (node: NodeInfo) {
+    const found = this.self.nodes
+      .find ((x) => x.edge.equals (node.edge))
 
     return this.build ({
       ...this.self,
-      datas: this.self.datas
-        .with (data)
+      nodes: this.self.nodes
+        .with (node)
         .without (x => x === found)
-    })
-  }
-
-  withoutData (predicate: (data: DataInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      datas: this.self.datas.without (predicate),
-    })
-  }
-
-  withProc (proc: ProcInfo) {
-    return this.build ({
-      ...this.self,
-      procs: this.self.procs.with (proc),
-    })
-  }
-
-  withoutProc (predicate: (proc: ProcInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      procs: this.self.procs.without (predicate),
     })
   }
 
@@ -225,33 +256,31 @@ class StateInfo <S extends StateSelf = StateSelf> {
     })
   }
 
-  withoutTask (predicate: (task: TaskInfo) => boolean) {
-    return this.build ({
-      ...this.self,
-      tasks: this.self.tasks.without (predicate),
-    })
+  log () {
+    this.self.entries.log ("entries")
+    this.self.pointers.log ("pointers")
+    this.self.nodes.log ("nodes")
+    this.self.procs.log ("procs")
+    this.self.tasks.log ("tasks")
+    this.self.errors.log ("errors")
   }
 
-  withError (error: Error) {
-    return this.build ({
-      ...this.self,
-      errors: this.self.errors.with (error),
-    })
-  }
+  validate() {}
 }
 
 const INIT_STATE = new StateInfo ({
-  atoms: EMPTY,
-  datas: EMPTY,
+  entries: EMPTY,
+  pointers: EMPTY,
+  nodes: EMPTY,
   procs: EMPTY,
   tasks: EMPTY,
   errors: EMPTY,
 })
 
-
+type List <T> = [ T, ...T[] ]
 
 type ActiveSelf = StateSelf & {
-  stack: symbol[],
+  stack: List <CallInfo>
   dispatcher: ReactDispatcher|null,
 }
 
@@ -271,100 +300,217 @@ class ActiveState extends StateInfo <ActiveSelf>  {
     })
   }
 
+  get step() {
+    const [{ step }] = this.self.stack
+    return step
+  }
+
+  next() {
+    const [ { task, step }, ...stack ] = this.self.stack
+
+    return this.build ({
+      ...this.self,
+      stack: [
+        new CallInfo (task, step + 1),
+        ...stack,
+      ]
+    })
+  }
+
   peek() {
-    const id = this.self.stack[0]
-    const task = this.findTask ((task) => task.id === id)
-    if (!task) throw new Error ("[reduceStatus] task not found")
+    const [ call ] = this.self.stack
+    
+    const task = this.tasks.find ((task) => task.id === call.task)
+    if (!task) throw new Error ("[peek] task not found")
     return task
   }
 
   push (id: symbol) {
+    const found = this.self.stack.find (x => x.task === id)
+    if (found) throw new Error ("[ActiveState] can't push")
+
     return this.build ({
       ...this.self,
       stack: [
-        id,
+        found ?? new CallInfo (id, 0),
         ...this.self.stack,
       ],
     })
   }
 
   pop() {
-    let { stack, dispatcher, ...self } = this.self
+    const { stack, dispatcher, ...self } = this.self
+    const [ _, ...nextStack ] = stack
 
-    stack = stack.slice (1)
-
-    if (stack.length <= 1) {
+    if (!nextStack.length) {
       Dispatcher.current = dispatcher
       return new StateInfo (self)
     }
 
     return this.build ({
       ...self,
-      stack,
+      stack: nextStack as List <CallInfo>,
       dispatcher,
     })
+  }
+
+  log () {
+    super.log()
+    console.log ("stack", this.self.stack)
+  }
+
+  validate () {
+    if (!this.self.dispatcher) {
+      throw new Error ("[ActiveState] no dispatcher")
+    }
+    if (!this.self.stack.length) {
+      throw new Error ("[ActiveState] no stack")
+    }
+
+    for (const { task } of this.self.stack) {
+      if (!this.self.tasks.find (x => x.id === task)) {
+        throw new Error ("[ActiveState] task (in stack) not found")
+      }
+    }
   }
 }
 
 
-
 // STORE DEFINITION
+
+// #region Inline Views
 
 export class InviewStartEffect extends Effect <void> {}
 export class InviewEndEffect extends Effect <void> {}
 
+function reduceInviewEnd (state: StateInfo, effect: InviewEndEffect) {
+  const { inview, ..._state } = state
+  if (!inview) throw new Error ("[InviewEndEffect] No inview")
+  Dispatcher.current = inview.dispatcher
+  return _state
+}
+
+function reduceInviewStart (state: StateInfo, effect: InviewStartEffect) {
+  if (state.inview) throw new Error ("[InviewStartEffect] inview")
+  if (state.prerendering) throw new Error ("[InviewStartEffect] prerendering")
+
+  const dispatcher = Dispatcher.current
+  if (!dispatcher) {
+    throw new Error ("[InviewStartEffect] No dispatcher")
+  }
+
+  return {
+    ...state,
+    inview: {
+      dispatcher
+    },
+  }
+}
+
+// #endregion
+
+function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
+  if (effect instanceof UseAtomicEffect) {
+    return reduceUseAtomic (state, effect)
+  }
+  else if (effect instanceof UseStepEffect) {
+    return reduceUseStep (state, effect)
+  }
+  else if (effect instanceof UseUpdateEffect) {
+    return reduceUseUpdate (state, effect)
+  }
+
+  console.error ("Unknown effect:", effect)
+  throw new Error ("[reduceActiveState] Unknown effect")
+}
+
+function reduceState (state: StateInfo, effect: Effect): StateInfo {
+  if (effect instanceof InviewEndEffect) {
+    return state
+    // return reduceInviewEnd (state, effect)
+  }
+  else if (effect instanceof InviewStartEffect) {
+    return state
+    // return reduceInviewStart (state, effect)
+  }
+  
+  else if (effect instanceof EntrypointEffect) {
+    return reduceEntrypoint (state, effect)
+  }
+  else if (effect instanceof AtomEffect) {
+    return reduceAtom (state, effect)
+  }
+  else if (effect instanceof UpdateEffect) {
+    return reduceUpdate (state, effect)
+  }
+  else if (effect instanceof AsyncUpdateEffect) {
+    return reduceUpdateAsync (state, effect)
+  }
+  else if (effect instanceof RevalidateEffect) {
+    return reduceRevalidate (state, effect)
+  }
+  else if (effect instanceof TaskEffect) {
+    return reduceTask (state, effect)
+  }
+  else if (effect instanceof ForceUpdateEffect) {
+    return reduceForceUpdate (state, effect)
+  }
+  else if (state instanceof ActiveState) {
+    return reduceActiveState (state, effect)
+  }
+
+  console.error ("Unknown effect:", effect)
+  throw new Error ("[reduceState] Unknown effect")
+}
 
 const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
   if (! (state instanceof StateInfo)) {
     throw new Error ("NOT STATE INFO")
   }
-  
-  if (effect instanceof InviewEndEffect) {
-    return state
 
-    const { inview, ..._state } = state
-    if (!inview) throw new Error ("[InviewEndEffect] No inview")
-    Dispatcher.current = inview.dispatcher
-    return _state
-  }
+  let nextState = state
 
-  if (effect instanceof InviewStartEffect) {
-    return state
+  function dump (msg: string) {
+    console.error (msg)
 
-    if (state.inview) throw new Error ("[InviewStartEffect] inview")
-    if (state.prerendering) throw new Error ("[InviewStartEffect] prerendering")
+    console.group ("Prev State")
+    state.log()
+    console.groupEnd()
 
-    const dispatcher = Dispatcher.current
-    if (!dispatcher) {
-      throw new Error ("[InviewStartEffect] No dispatcher")
-    }
-
-    return {
-      ...state,
-      inview: {
-        dispatcher
-      },
+    if (nextState !== state) {
+      console.group ("Next State")
+      nextState.log()
+      console.groupEnd()
     }
   }
 
-  if (effect instanceof EntrypointEffect) {
-    return reduceEntrypoint (state, effect)
-  }
-
-  if (effect instanceof AtomEffect) {
-    return reduceAtom (state, effect)
-  }
-
-  if (effect instanceof StatusEffect) {
-    return reduceStatus (state, effect)
-  }
-
-  if (effect instanceof AsyncStatusEffect) {
-    return reduceStatusAsync (state, effect)
-  }
+  console.group ("extendStore")
   
-  console.error ("Unknown effect:", effect)
-  throw new Error ("[defineStore] Unknown effect")
+  try {
+    console.log ("active:", state instanceof ActiveState)
+    console.log ("effect:", effect)
+
+    try {
+      nextState = reduceState (state, effect)
+    }
+    catch (err) {
+      dump ("error while reducing")
+      throw err
+    }
+
+    try {
+      nextState.validate()
+    }
+    catch (err) {
+      dump ("error while validating")
+      throw err
+    }
+
+    return nextState
+  }
+  finally {
+    console.groupEnd()
+  }
 })
 
 export function extendStore (...args: Parameters <typeof _extendStore>) {
@@ -380,16 +526,16 @@ export const handleEffect = extendStore (function* (effect: Effect) {
     // handleCall (effect)
   }
   else {
-    yield* effect
+    return yield* effect
   }
+})
+
+export const handleEffectAsync = extendStore (async function* (effect: Effect) {
+  return yield* effect
 })
 
 
 // #region Atomic Functions
-
-abstract class StepInfo {
-  id = Symbol()
-}
 
 class ProcInfo {
   constructor (
@@ -517,17 +663,110 @@ class CleanEdge extends EdgeInfo {
 
 // #endregion
 
-class DataInfo {
+// #region Steps
+// for storing info within a node
+
+abstract class StepInfo {}
+
+class ValueStep extends StepInfo {
+  constructor (
+    public readonly current: any,
+  ) {
+    super()
+  }
+}
+
+class UpdateStep extends StepInfo {
+  readonly id = Symbol(`step:${guidBy({})}`)
+
+  constructor () {
+    super()
+  }
+}
+
+// #endregion
+
+// #region Nodes
+
+abstract class NodeInfo {
+  abstract edge: EdgeInfo
+  protected abstract steps: StepInfo[]
+
+  abstract withStatus (status: Status): CleanNode
+
+  has (step: symbol) {
+    return this.steps.some ((x) => x instanceof UpdateStep && x.id === step)
+  }
+}
+
+class DirtyNode extends NodeInfo {
+  constructor (
+    public readonly edge: EdgeInfo,
+    protected readonly steps: StepInfo[],
+  ) {
+    super()
+  }
+
+  withStep <T extends StateInfo> (state: T, step: StepInfo): T {
+    const nextState = state
+      .nodes.without (x => x === this)
+      .withNode (new DirtyNode (this.edge, [
+        ...this.steps,
+        step,
+      ]))
+
+    return nextState as T
+  }
+
+  withStatus (status: Status) {
+    if (! (this.edge instanceof CleanEdge)) {
+      throw new Error ("[DirtyNode::withStatus] not a clean edge")
+    }
+
+    return new CleanNode (this.edge, status, this.steps)
+  }
+}
+
+class CleanNode extends NodeInfo {
   constructor (
     public readonly edge: CleanEdge,
     public readonly status: Status,
+    protected readonly steps: StepInfo[],
+  ) {
+    super()
+  }
+
+  step (index: number) {
+    const step = this.steps.find ((_, i) => i === index)
+    if (!step) throw new Error ("[step] not found")
+    return step
+  }
+
+  withStatus (status: Status) {
+    return new CleanNode (this.edge, status, this.steps)
+  }
+}
+
+// #endregion
+
+class ViewInfo {
+  constructor (
+    public readonly id: string,
+    public readonly edge: CleanEdge,
   ) {}
 }
 
 // #region Tasks
 
+class CallInfo {
+  constructor (
+    public readonly task: symbol,
+    public readonly step: number,
+  ) {}
+}
+
 class TaskInfo {
-  id = Symbol()
+  id = Symbol(`task:${guidBy({})}`)
 
   constructor (
     public readonly edge: EdgeInfo,
@@ -543,15 +782,20 @@ class RenderTask extends TaskInfo {
   }
 }
 
-// #endregion
-
-class AtomInfo {
-  atom = createAtom()
-
+class TaskEffect extends Effect <void> {
   constructor (
-    public readonly edge: EdgeInfo,
-  ) {}
+    public readonly id: symbol,
+  ) {
+    super()
+  }
 }
+
+function reduceTask (state: StateInfo, effect: TaskEffect) {
+  effect.return()
+  return state.push (effect.id)
+}
+
+// #endregion
 
 // #region Atoms
 
@@ -592,7 +836,7 @@ class AtomEffect extends Effect <Status> {
   }
 }
 
-class StatusEffect extends Effect <void> {
+class UpdateEffect extends Effect <void> {
   constructor (
     public readonly status: Status
   ) {
@@ -600,7 +844,7 @@ class StatusEffect extends Effect <void> {
   }
 }
 
-class AsyncStatusEffect extends Effect <void> {
+class AsyncUpdateEffect extends Effect <void> {
   constructor (
     public readonly status: Status,
     public readonly edge: EdgeInfo,
@@ -610,12 +854,13 @@ class AsyncStatusEffect extends Effect <void> {
 }
 
 const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
-  console.group ("--- performLoadingOf ---")
+  console.group ("performLoadingOf")
 
   try {
+    // await Promise.resolve()
     for (const _ of loop ("performLoadingOf")) {
+      console.log ("it's loading time...")
       const status = yield* new AtomEffect (atom)
-      console.groupEnd()
 
       if (status instanceof Fulfilled) return
       if (status instanceof Rejected) throw status.reason
@@ -632,9 +877,8 @@ const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
 })
 
 const handleStatusOf = extendStore (function* (atom: Atom <any>) {
-  console.group ("handleStatusOf")
+  console.log ("handleStatusOf")
   const status = yield* new AtomEffect (atom)
-  console.groupEnd()
 
   if (status instanceof Fulfilled) return "fulfilled"
   if (status instanceof Rejected) return "rejected"
@@ -644,18 +888,16 @@ const handleStatusOf = extendStore (function* (atom: Atom <any>) {
 })
 
 const handleReasonOf = extendStore (function* (atom: Atom <any>) {
-  console.group ("<handleReasonOf>")
+  console.log ("handleReasonOf")
   const status = yield* new AtomEffect (atom)
-  console.groupEnd()
 
   if (status instanceof Rejected) return status.reason
   throw new Error ("Atom was not rejected")
 })
 
 const handleValueOf = extendStore (function* (atom: Atom <any>) {
-  console.group ("<handle-value-of>")
+  console.log ("handleValueOf")
   const status = yield* new AtomEffect (atom)
-  console.groupEnd()
 
   if (status instanceof Fulfilled) return status.value
   throw new Error ("Atom was not fulfilled")
@@ -669,13 +911,15 @@ function createAtom() {
       await performLoadingOf (atom)
     }
     catch (err) {
-      console.error (err)
+      faulty.catch (err)
     }
   })
 
+  /* NOTE: This leads to wonky behavior when rendered.
   atom[Symbol.iterator] = function* () {
     return yield* new AtomEffect (atom)
   }
+  */
 
   Object.defineProperties (atom, {
     status: {
@@ -707,26 +951,35 @@ function createAtom() {
   return atom
 }
 
-function reduceStatus (state: StateInfo, effect: StatusEffect) {
+function reduceUpdate (state: StateInfo, effect: UpdateEffect) {
+  effect.return()
+
   if (! (state instanceof ActiveState)) {
-    console.log ("[reduceStatus]", state)
-    throw new Error ("[reduceStatus] state not active")
+    console.error ("[reduceUpdate]", state)
+    throw new Error ("[reduceUpdate] state not active")
   }
-  
+
   const { edge } = state.peek()
 
-  // TODO: This is not going to be true when we need to load args...
-  const res = state
+  const node = state.nodes.get (x => x.edge.equals (edge))
+
+  // TODO: Should we not have tasks?
+  return state
     .pop()
-    .withData (new DataInfo (edge, effect.status))
-  return res
+    .tasks.without (x => x.edge.equals (edge))
+    .withNode (node.withStatus (effect.status))
 }
 
-function reduceStatusAsync (state: StateInfo, effect: AsyncStatusEffect) {
-  // TODO: This is not going to be true when we need to load args...
-  const res = state
-    .withData (new DataInfo (effect.edge, effect.status))
-  return res
+function reduceUpdateAsync (state: StateInfo, effect: AsyncUpdateEffect) {
+  effect.return()
+  // TODO: This is not going to work when we need to load args...
+  const node = state.nodes.get (x => x.edge.equals (effect.edge))
+
+  if (! (node instanceof CleanNode)) {
+    throw new Error ("[reduceUpdateAsync] not clean")
+  }
+
+  return state.withNode (node.withStatus (effect.status))
 }
 
 const performUpdate = extendStore (async function* (
@@ -743,13 +996,13 @@ const performUpdate = extendStore (async function* (
     }
   })
 
-  yield new AsyncStatusEffect (status, edge)
+  yield* new AsyncUpdateEffect (status, edge)
 })
 
-function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
-  let { func, args } = edge
+function reduceAtomAux (effect: AtomEffect, task: TaskInfo) {
+  const { func } = task.edge
 
-  args = args.map (arg => {
+  const args = task.edge.args.map (arg => {
     if (arg instanceof ValueParam) {
       return arg.value
     }
@@ -760,6 +1013,7 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
   effect.yield (function* () {
     try {
       let result: any
+      yield new TaskEffect (task.id)
       if (func instanceof GeneratorFunction) {
         // TODO: Intercept effects?
         result = yield* func (...args)
@@ -771,55 +1025,81 @@ function reduceAtomAux (effect: AtomEffect, edge: EdgeInfo) {
       console.log ("[reduceAtomAux] result", result)
 
       if (! (result instanceof Promise)) {
-        yield new StatusEffect (new Fulfilled (result))
+        yield* new UpdateEffect (new Fulfilled (result))
       }
       else {
-        const promise = performUpdate (edge, result)
-        yield new StatusEffect (new Pending (promise))
+        const promise = performUpdate (task.edge, result)
+        yield* new UpdateEffect (new Pending (promise))
       }
     }
     catch (thrown) {
       if (thrown instanceof Promise) {
         // yield new SuspenseEffect()
       }
-      yield new StatusEffect (new Rejected (thrown))
+      yield* new UpdateEffect (new Rejected (thrown))
     }
   })
 }
 
 function reduceAtom (state: StateInfo, effect: AtomEffect) {
-  console.log ("- reduceAtom")
+  console.log ("reduceAtom")
 
   const edge = state.edgeOf (effect.atom)
-  const data = state.findData (x => x.edge.equals (edge))
+  const node = state.nodes.find (x => x.edge.equals (edge))
+  const task = state.tasks.find (x => x.edge.equals (edge))
 
-  if (data) {
-    console.log ("found status!", data.status)
-    effect.return (data.status)
+  if (task) {
+    if (!node) {
+      state = state.withNode (new DirtyNode (edge, []))
+    }
+    reduceAtomAux (effect, task)
     return state
   }
-
-  const task = state.findTask (x => x.edge.equals (edge))
-  if (!task) {
-    console.log ("[reduceAtom]", state)
-    throw new Error ("[reduceAtom] task not found")
+  /*
+  else if (node instanceof DirtyNode) {
+    console.warn ("Unexpected dirty node w/o task")
+    return state
   }
-
-  reduceAtomAux (effect, edge)
-  return state.push (task.id)
+  */
+  else if (node instanceof CleanNode) {
+    console.log ("found status!", node.status)
+    effect.return (node.status)
+    return state
+  }
+  
+  console.error ("[reduceAtom] no strategy", { edge, state })
+  throw new Error ("[reduceAtom] no strategy")
 }
 
 // #endregion
 
+abstract class PointerInfo {
+  atom = createAtom()
+}
+
+class EdgePointer extends PointerInfo {
+  constructor (
+    public readonly edge: EdgeInfo,
+  ) {
+    super()
+  }
+}
+
 // #region Entrypoints
 
-class EntryAtomInfo extends AtomInfo {
+class EntryPointer extends PointerInfo {
   constructor (
-    edge: EdgeInfo,
     public readonly id: string,
   ) {
-    super (edge)
+    super()
   }
+}
+
+class EntrypointInfo {
+  constructor (
+    public readonly id: string,
+    public readonly edge: CleanEdge,
+  ) {}
 }
 
 class EntrypointEffect extends Effect <Atom <any>> {
@@ -839,7 +1119,8 @@ export const performEntrypoint = extendStore (function* (
 ) {
   const infos = args
     .map (value => new ValueParam (value))
-  const edge = new EdgeInfo (scope, func, infos)
+  // TODO: Back to EdgeInfo
+  const edge = new CleanEdge (scope, func, infos)
   return yield* new EntrypointEffect (id, edge)
 })
 
@@ -847,11 +1128,15 @@ function reduceEntrypoint (
   state: StateInfo,
   effect: EntrypointEffect
 ): StateInfo {
-  const info = new EntryAtomInfo (effect.edge, effect.id)
-  state = state.withAtom (info)
+  const info = new EntryPointer (effect.id)
+  state = state.pointers.with (info)
+
+  state = state.entries.without (x => x.id === effect.id)
+  state = state.entries.with (new EntrypointInfo (effect.id, effect.edge))
+
   effect.return (info.atom)
 
-  const data = state.findData ((data) => {
+  const data = state.nodes.find ((data) => {
     return data.edge.equals (effect.edge)
   })
 
@@ -861,13 +1146,70 @@ function reduceEntrypoint (
 
 // #endregion
 
+// --- APIs ---
 
+// #region revalidate
+
+const _revalidate = extendStore (function* (atom: Atom <any>) {
+  yield* new RevalidateEffect (atom)
+  resyncAll()
+})
+
+export function revalidate (atom: Atom <any>) {
+  _revalidate (atom)
+}
+
+class RevalidateEffect extends Effect <void> {
+  constructor (
+    public atom: Atom <any>,
+  ) {
+    super()
+  }
+}
+
+function reduceRevalidate (state: StateInfo, effect: RevalidateEffect) {
+  const edge = state.edgeOf (effect.atom)
+  const node = state.nodes.get (x => x.edge.equals (edge))
+
+  if (node instanceof DirtyNode) {
+    throw new Error ("Not implemented yet")
+    // state = state.nodes.without (x => x === node)
+    // state = state.tasks.without (x => x.edge.equals (edge))
+  }
+
+  const task = new TaskInfo (edge)
+  effect.return()
+  return state.withTask (task)
+}
+
+// #endregion
 
 // --- HOOKS ---
 
-// #region _use
+// #region use
 
-export class UsingEffect extends Effect <any> {
+export class UseEffect extends Effect <any> {
+  constructor (
+    public usable: any,
+  ) {
+    super()
+  }
+}
+
+REDISPATCHER.use = extendStore (function* (usable: any) {
+  return yield* new UseEffect (usable)
+})
+
+// #endregion
+
+// #region StepInfo & _use
+
+const NEVER = doo (() => {
+  class Never {}
+  return new Never() as any
+})
+
+export class UseStepEffect extends Effect <any> {
   constructor (
     public factory: Func0,
   ) {
@@ -876,15 +1218,40 @@ export class UsingEffect extends Effect <any> {
 }
 
 REDISPATCHER._use = extendStore (function* (factory: Func0) {
-  return yield* new UsingEffect (factory)
+  return yield* new UseStepEffect (factory)
 })
 
-const NEVER = {} as any
+function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
+  const task = state.peek()
+
+  const node = state.nodes.get (x => x.edge.equals (task.edge))
+
+  if (node instanceof DirtyNode) {
+    const value = effect.factory()
+    state = node.withStep (state, new ValueStep (value))
+
+    effect.return (value)
+    return state.next()
+  }
+  
+  else if (node instanceof CleanNode) {
+    const step = node.step (state.step)
+
+    if (! (step instanceof ValueStep)) {
+      throw new Error ("[reduceUseStep] step not found")
+    }
+
+    effect.return (step.current)
+    return state.next()
+  }
+
+  throw new Error ("[reduceUseStep] unknown node")
+}
 
 /**
  * A hook for a constant
  */
-export function _use <T> (factory: () => T) {
+export function _use <T> (factory: () => T): T {
   const dispatcher = Dispatcher.current
   if (!dispatcher) return factory()
   
@@ -900,12 +1267,96 @@ export function _use <T> (factory: () => T) {
   return ref.current as T
 }
 
-// #endregion _use
+// #endregion
 
+// #region useUpdate
 
+class UseUpdateEffect extends Effect <symbol> {
+  constructor () {
+    super()
+  }
+}
 
+class ForceUpdateEffect extends Effect <void> {
+  constructor (
+    public readonly step: symbol,
+  ) {
+    super()
+  }
+}
 
-// #region Recon Hooks
+const forceUpdateBy = memoize ((step: symbol) => {
+  return function forceUpdate () {
+    handleEffect (new ForceUpdateEffect (step))
+    resyncAll()
+  }
+})
+
+REDISPATCHER.useUpdate = function _useUpdate () {
+  const id = handleEffect (new UseUpdateEffect())
+  return forceUpdateBy (id)
+}
+
+function reduceForceUpdate (state: StateInfo, effect: ForceUpdateEffect) {
+  const { step } = effect
+  const node = state.findNodeByStep (step)
+  console.log ("found node", node)
+
+  if (! (node instanceof CleanNode)) {
+    throw new Error ("Can't update dirty node")
+    // state = state.nodes.without (x => x === node)
+    // state = state.tasks.without (x => x.edge.equals (edge))
+  }
+
+  const task = new TaskInfo (node.edge)
+  effect.return()
+  return state.withTask (task)
+}
+
+function reduceUseUpdate (state: ActiveState, effect: UseUpdateEffect) {
+  const task = state.peek()
+
+  const node = state.nodes.get (x => x.edge.equals (task.edge))
+
+  if (node instanceof DirtyNode) {
+    const step = new UpdateStep()
+    state = node.withStep (state, step)
+
+    effect.return (step.id)
+    return state.next()
+  }
+  else if (node instanceof CleanNode) {
+    const step = node.step (state.step)
+
+    if (! (step instanceof UpdateStep)) {
+      throw new Error ("[reduceUseUpdate] step not found")
+    }
+
+    effect.return (step.id)
+    return state.next()
+  }
+
+  throw new Error ("[reduceUseUpdate] unknown node")
+}
+
+export function useUpdate () {
+  const dispatcher = Dispatcher.current
+  if (!dispatcher) throw new Error ("[useUpdate] no dispatcher")
+
+  const { useUpdate } = dispatcher
+  if (useUpdate) return useUpdate() // eslint-disable-line
+
+  // eslint-disable-next-line
+  const [ _, setSymbol ] = useState (() => Symbol())
+
+  return _use (() => () => {
+    setSymbol (() => Symbol())
+  })
+}
+
+// #endregion
+
+// #region useAtomic
 
 export class UseAtomicEffect extends Effect <Atom <any>> {
   constructor (
@@ -920,7 +1371,21 @@ REDISPATCHER.useAtomic = extendStore (function* (func: Func, ...args: any[]) {
   return yield* new UseAtomicEffect (func, args)
 })
 
+function reduceUseAtomic (state: ActiveState, effect: UseAtomicEffect) {
+  const args = effect.args.map (x => new ValueParam (x))
 
+  const prev = state.peek()
+  // TODO: EdgeInfo
+  const edge = new CleanEdge (prev.edge.scope, effect.func, args)
+
+  // TODO: If we have data, we don't need to create a task, right?
+  const task = new TaskInfo (edge)
+  return state.withTask (task)
+}
+
+// #endregion
+
+// #region useView
 
 export class UseViewEffect extends Effect <MemoExoticComponent <any>> {
   constructor (
@@ -936,24 +1401,68 @@ REDISPATCHER.useView = extendStore (function* (render: Func) {
 
 // #endregion
 
+// #region useRef
 
-
-export class UseEffect extends Effect <any> {
+export class UseRefEffect extends Effect <any> {
   constructor (
-    public usable: any,
+    public current: any,
   ) {
     super()
   }
 }
 
-REDISPATCHER.use = extendStore (function* (usable: any) {
-  return yield* new UseEffect (usable)
+REDISPATCHER.useRef = extendStore (function* (current: any) {
+  return yield* new UseRefEffect (current)
 })
 
+function reduceUseRef (state: StateInfo, effect: UseRefEffect) {
+  throw new Error ("useRef not implemented yet")
+}
 
+// #endregion
 
-// #region React Hooks
+// #region useReducer
 
+export class UseReducerEffect extends Effect <[ any, Func ]> {
+  constructor (
+    public reducer: any,
+    public init: any,
+  ) {
+    super()
+  }
+}
+
+REDISPATCHER.useReducer = extendStore (function* (reducer: any, init: any) {
+  return yield* new UseReducerEffect (reducer, init)
+})
+
+function reduceUseReducer (state: StateInfo, effect: UseReducerEffect) {
+  throw new Error ("[reduceUseReducer] not implemented")
+}
+
+// #endregion
+
+// #region useState
+
+REDISPATCHER.useState = function useState (initial: any) {
+  const update = useUpdate()
+
+  const ref = _use (() => {
+    const state = typeof initial === "function" ? initial() : initial
+    return { state }
+  })
+
+  const setState = _use (() => (arg: any) => {
+    ref.state = typeof arg === "function" 
+      ? arg (ref.state)
+      : arg
+    return update()
+  })
+
+  return [ ref.state, setState ]
+}
+
+/*
 export class UseStateEffect extends Effect <[ any, Func ]> {
   constructor (
     public init: any,
@@ -966,7 +1475,14 @@ REDISPATCHER.useState = extendStore (function* (init: any) {
   return yield* new UseStateEffect (init)
 })
 
+function reduceUseState (state: StateInfo, effect: UseStateEffect) {
+  throw new Error ("[reduceUseState] not implemented")
+}
+*/
 
+// #endregion
+
+// #region React Hooks
 
 export class UseIdEffect extends Effect <string> {}
 
@@ -1021,20 +1537,6 @@ REDISPATCHER.useLayoutEffect = extendStore (function* (effect: any, deps: Depend
 
 
 
-export class UseRefEffect extends Effect <any> {
-  constructor (
-    public current: any,
-  ) {
-    super()
-  }
-}
-
-REDISPATCHER.useRef = extendStore (function* (current: any) {
-  return yield* new UseRefEffect (current)
-})
-
-
-
 export class UseContextEffect extends Effect <any> {
   constructor (
     public context: any,
@@ -1045,21 +1547,6 @@ export class UseContextEffect extends Effect <any> {
 
 REDISPATCHER.useContext = extendStore (function* (context: any) {
   return yield* new UseContextEffect (context)
-})
-
-
-
-export class UseReducerEffect extends Effect <[ any, Func ]> {
-  constructor (
-    public reducer: any,
-    public init: any,
-  ) {
-    super()
-  }
-}
-
-REDISPATCHER.useReducer = extendStore (function* (reducer: any, init: any) {
-  return yield* new UseReducerEffect (reducer, init)
 })
 
 
@@ -1187,6 +1674,6 @@ REDISPATCHER.useActionState = extendStore (function* (action: Func, init: any) {
   return yield* new UseActionStateEffect (action, init)
 })
 
+
+
 // #endregion
-
-

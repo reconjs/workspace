@@ -6,6 +6,7 @@
     "hello:next": "nx dev hello-next",
     "hello:vite": "nx dev hello-vite",
     "hello:test": "nx test hello-vite",
+    "hello:build": "nx build hello-vite",
     "lolalemon:next": "nx dev lolalemon-next",
     "lolalemon:vite": "nx dev lolalemon-vite",
     "lolalemon:test": "nx test lolalemon-vite",

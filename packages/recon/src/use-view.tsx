@@ -1,4 +1,4 @@
-import { ComponentProps, ComponentType, FunctionComponent, MemoExoticComponent, useId } from "react"
+import { ComponentProps, ComponentType, FunctionComponent, MemoExoticComponent, useId, useMemo } from "react"
 import { Dispatcher } from "./state"
 import { PropsOf } from "@reconjs/utils-react"
 import { memoize } from "@reconjs/utils"
@@ -22,6 +22,7 @@ const renderById = memoize ((_: string) => ({
   current: NEVER_VIEW as any,
 }))
 
+/*
 const handleRender = extendStore (function* (render: () => any) {
   yield new InviewStartEffect()
 
@@ -32,13 +33,13 @@ const handleRender = extendStore (function* (render: () => any) {
     yield new InviewEndEffect()
   }
 })
+*/
 
 const viewById = memoize ((id: string): ComponentType <any> => {
   return function ReconView (props: any) {
-    return handleRender (() => {
-      const render = renderById (id).current
-      return render (props)
-    })
+    // TODO: Disable non `use` hooks
+    const render = renderById (id).current
+    return render (props)
   }
 })
 
