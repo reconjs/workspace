@@ -170,7 +170,7 @@ describe ("Counter", () => {
     })
   })
 
-  describe.todo ("Counter (shared + async)", () => {
+  describe ("Counter (shared + async)", () => {
     const useInitialCount = atomic (async () => {
       return 0
     })

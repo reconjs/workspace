@@ -165,6 +165,7 @@ type StateSelf = {
   pointers: Bunch <PointerInfo>,
   nodes: Bunch <NodeInfo>,
   procs: Bunch <ProcInfo>,
+  suspenses: Bunch <SuspenseInfo>,
   tasks: Bunch <TaskInfo>,
   errors: Bunch <Error>,
 }
@@ -205,6 +206,11 @@ class StateInfo <S extends StateSelf = StateSelf> {
   get procs() {
     return substate (() => this.self.procs)
       .withBuild ((procs) => this.build ({ ...this.self, procs }))
+  }
+
+  get suspenses () {
+    return substate (() => this.self.suspenses)
+      .withBuild ((suspenses) => this.build ({ ...this.self, suspenses }))
   }
 
   get tasks() {
@@ -266,6 +272,7 @@ class StateInfo <S extends StateSelf = StateSelf> {
     this.self.pointers.log ("pointers")
     this.self.nodes.log ("nodes")
     this.self.procs.log ("procs")
+    this.self.suspenses.log ("suspenses")
     this.self.tasks.log ("tasks")
     this.self.errors.log ("errors")
   }
@@ -278,6 +285,7 @@ const INIT_STATE = new StateInfo ({
   pointers: EMPTY,
   nodes: EMPTY,
   procs: EMPTY,
+  suspenses: EMPTY,
   tasks: EMPTY,
   errors: EMPTY,
 })
@@ -424,6 +432,9 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   else if (effect instanceof UseUpdateEffect) {
     return reduceUseUpdate (state, effect)
   }
+  else if (effect instanceof SuspenseEffect) {
+    return reduceSuspense (state, effect)
+  }
 
   console.error ("Unknown effect:", effect)
   throw new Error ("[reduceActiveState] Unknown effect")
@@ -459,6 +470,9 @@ function reduceState (state: StateInfo, effect: Effect): StateInfo {
   }
   else if (effect instanceof ForceUpdateEffect) {
     return reduceForceUpdate (state, effect)
+  }
+  else if (effect instanceof UnsuspenseEffect) {
+    return reduceUnsuspense (state, effect)
   }
   else if (state instanceof ActiveState) {
     return reduceActiveState (state, effect)
@@ -802,6 +816,53 @@ function reduceTask (state: StateInfo, effect: TaskEffect) {
 
 // #endregion
 
+// #region Suspense
+
+class SuspenseInfo {
+  constructor (
+    public readonly task: symbol,
+    public readonly status: Pending,
+  ) {}
+}
+
+class UnsuspenseEffect extends Effect <void> {
+  constructor (
+    public readonly task: symbol,
+  ) {
+    super()
+  }
+}
+
+class SuspenseEffect extends Effect <void> {
+  constructor (
+    public readonly status: Pending,
+  ) {
+    super()
+  }
+}
+
+function reduceUnsuspense (state: StateInfo, effect: UnsuspenseEffect) {
+  effect.return()
+  return state.suspenses.without (x => x.task === effect.task)
+}
+
+function reduceSuspense (state: ActiveState, effect: SuspenseEffect) {
+  const task = state.peek()
+  effect.return()
+
+  effect.status.promise.then (() => {
+    handleEffect (new UnsuspenseEffect (task.id))
+  })
+
+  // TODO: Should we not have tasks?
+  return state.pop()
+    .suspenses.with (new SuspenseInfo (task.id, effect.status))
+    .nodes.without (x => x.edge.equals (task.edge) && x instanceof DirtyNode)
+}
+
+// #endregion
+
+
 // #region Atoms
 
 /**
@@ -1039,9 +1100,12 @@ function reduceAtomAux (effect: AtomEffect, task: TaskInfo) {
     }
     catch (thrown) {
       if (thrown instanceof Promise) {
-        // yield new SuspenseEffect()
+        const status = new Pending (thrown)
+        yield* new SuspenseEffect (status)
       }
-      yield* new UpdateEffect (new Rejected (thrown))
+      else {
+        yield* new UpdateEffect (new Rejected (thrown))
+      }
     }
   })
 }
@@ -1054,6 +1118,13 @@ function reduceAtom (state: StateInfo, effect: AtomEffect) {
   const task = state.tasks.find (x => x.edge.equals (edge))
 
   if (task) {
+    const suspended = state.suspenses.find (x => x.task === task.id)
+    if (suspended) {
+      console.log ("[reduceAtom] suspended")
+      effect.return (suspended.status)
+      return state
+    }
+
     if (!node) {
       state = state.withNode (new DirtyNode (edge, []))
     }

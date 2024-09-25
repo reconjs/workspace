@@ -50,9 +50,9 @@ function BasicCounter (props: {
 
 let loadingCount = 0
 
-const useInitialCount = atomic (() => {
+const useInitialCount = atomic (async () => {
   if (loadingCount++ > 10) throw new Error ("Should not be loading so much")
-  // await timeout (1000)
+  await timeout (1000)
   return 0
 })
 
@@ -73,6 +73,3 @@ export function Counter () {
     <BasicCounter count={count} setCount={setCount} />
   )
 }
-
-// This disables react-refresh from running and ruining everything.
-export const COUNTER_SYMBOL = Symbol()

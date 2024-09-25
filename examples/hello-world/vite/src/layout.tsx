@@ -7,8 +7,6 @@ const useHeaderAtom = atomic (() => {
   return "Recon + Vite"
 })
 
-export const NO_REFRESH = Symbol()
-
 export function Layout ({ children }: any) {
   const _header = useHeaderAtom()
   const header = use (_header)
