@@ -1,5 +1,10 @@
-import { createEvent, Func, Func0, guidBy, memoize, range, Subscribe, Vunc } from "@reconjs/utils"
-import React, { DependencyList, memo, MemoExoticComponent, useEffect, useState } from "react"
+import { Func, Func0, guidBy, loadPromise, memoize, range, Vunc } from "@reconjs/utils"
+import React, { 
+  DependencyList, 
+  memo, 
+  MemoExoticComponent, 
+  useState,
+} from "react"
 import { CallEffect, Effect } from "../effect"
 import { defineStore } from "./store"
 import { GeneratorFunction } from "../types"
@@ -1136,11 +1141,8 @@ function reduceEntrypoint (
 
   effect.return (info.atom)
 
-  const data = state.nodes.find ((data) => {
-    return data.edge.equals (effect.edge)
-  })
-
-  if (data) return state
+  const found = state.nodes.find (x => x.edge.equals (effect.edge))
+  if (found) return state
   return state.withTask (new TaskInfo (effect.edge))
 }
 
@@ -1188,6 +1190,7 @@ function reduceRevalidate (state: StateInfo, effect: RevalidateEffect) {
 
 // #region use
 
+/*
 export class UseEffect extends Effect <any> {
   constructor (
     public usable: any,
@@ -1199,6 +1202,11 @@ export class UseEffect extends Effect <any> {
 REDISPATCHER.use = extendStore (function* (usable: any) {
   return yield* new UseEffect (usable)
 })
+*/
+
+REDISPATCHER.use = function use (usable: any) {
+  return loadPromise (usable)
+}
 
 // #endregion
 
@@ -1371,16 +1379,23 @@ REDISPATCHER.useAtomic = extendStore (function* (func: Func, ...args: any[]) {
   return yield* new UseAtomicEffect (func, args)
 })
 
-function reduceUseAtomic (state: ActiveState, effect: UseAtomicEffect) {
-  const args = effect.args.map (x => new ValueParam (x))
+function reduceUseAtomic (state: StateInfo, effect: UseAtomicEffect) {
+  if (! (state instanceof ActiveState)) {
+    throw new Error ("[reduceUseAtomic] not active")
+  }
 
   const prev = state.peek()
-  // TODO: EdgeInfo
+
+  const args = effect.args.map (x => new ValueParam (x))
   const edge = new CleanEdge (prev.edge.scope, effect.func, args)
 
-  // TODO: If we have data, we don't need to create a task, right?
-  const task = new TaskInfo (edge)
-  return state.withTask (task)
+  const pointer = new EdgePointer (edge)
+  state = state.pointers.with (pointer)
+  effect.return (pointer.atom)
+
+  const found = state.nodes.find (x => x.edge.equals (edge))
+  if (found) return state
+  else return state.withTask (new TaskInfo (edge))
 }
 
 // #endregion
