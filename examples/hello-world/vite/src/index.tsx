@@ -3,7 +3,7 @@ import "./index.css"
 import { createRoot } from "react-dom/client"
 import { Suspense } from "react"
 import { useView } from "recon"
-import { Layout, NO_REFRESH } from "./layout"
+import { Layout } from "./layout"
 import { Page } from "./count-page"
 
 const ROOT = document.getElementById('root')!
@@ -26,4 +26,4 @@ export function App () {
   )
 }
 
-createRoot (ROOT).render(<App />)
+createRoot (ROOT).render (<App />)

@@ -755,7 +755,7 @@ class CleanNode extends NodeInfo {
     super()
   }
 
-  step (index: number) {
+  at (index: number) {
     const step = this.steps.find ((_, i) => i === index)
     if (!step) throw new Error ("[step] not found")
     return step
@@ -1314,7 +1314,7 @@ function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
   }
   
   else if (node instanceof CleanNode) {
-    const step = node.step (state.step)
+    const step = node.at (state.step)
 
     if (! (step instanceof ValueStep)) {
       throw new Error ("[reduceUseStep] step not found")
@@ -1405,7 +1405,7 @@ function reduceUseUpdate (state: ActiveState, effect: UseUpdateEffect) {
     return state.next()
   }
   else if (node instanceof CleanNode) {
-    const step = node.step (state.step)
+    const step = node.at (state.step)
 
     if (! (step instanceof UpdateStep)) {
       throw new Error ("[reduceUseUpdate] step not found")

@@ -93,11 +93,11 @@ describe ("useHelloAtom", () => {
     })
     
     function App () {
-      const helloAtom = useTextAtom ("en", "Hello")
-      const worldAtom = useTextAtom ("en", "World")
+      const _hello = useTextAtom ("en", "Hello")
+      const _world = useTextAtom ("en", "World")
       
-      const hello = use (helloAtom)
-      const world = use (worldAtom)
+      const hello = use (_hello)
+      const world = use (_world)
       
       return <h1>{hello} {world}</h1>
     }
