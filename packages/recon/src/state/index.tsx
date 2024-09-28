@@ -13,6 +13,8 @@ import { Atom } from "../atomic"
 import { faulty } from "./fault"
 import { resyncAll } from "../resync"
 
+// #region Utils
+
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
   : null
@@ -29,9 +31,9 @@ function* loop (debug: string) {
   throw new Error (`[loop] too much (${debug})`)
 }
 
+// #endregion
 
-
-// HOOKS
+// #region Hooks Types
 
 export type ReactHooks = {
   useActionState: (action: Func, init: any) => [ any, Vunc <[ any ]> ],
@@ -72,9 +74,9 @@ export type ReconDispatcher = ReactHooks & ReconHooks & {
 
 const REDISPATCHER = {} as ReconDispatcher
 
+// #endregion
 
-
-// REACT INTERNALS
+// #region React Internals
 
 const COMPONENT_TYPE = doo (() => {
   const UNRENDERED = memo (() => null)
@@ -97,9 +99,9 @@ export const Dispatcher = {
   }
 }
 
+// #endregion
 
-
-// STORE STATE/TYPES
+// #region Bunch & substate
 
 class Bunch <T> {
   constructor (private items: T[] = []) {}
@@ -158,6 +160,8 @@ function substate <T> (read: () => Bunch <T>) {
   }
 }
 
+// #endregion
+
 const EMPTY = new Bunch <any> ([])
 
 type StateSelf = {
@@ -169,6 +173,8 @@ type StateSelf = {
   tasks: Bunch <TaskInfo>,
   errors: Bunch <Error>,
 }
+
+// #region StateInfo
 
 class StateInfo <S extends StateSelf = StateSelf> {
   constructor (protected readonly self: S) {}
@@ -238,9 +244,9 @@ class StateInfo <S extends StateSelf = StateSelf> {
     }
   }
 
-  findNodeByStep (step: symbol) {
+  findNodeByPhase (phase: symbol) {
     return this.nodes.find ((node) => {
-      return node.has (step)
+      return node.has (phase)
     })
   }
 
@@ -290,6 +296,10 @@ const INIT_STATE = new StateInfo ({
   errors: EMPTY,
 })
 
+// #endregion
+
+// #region ActiveState
+
 type List <T> = [ T, ...T[] ]
 
 type ActiveSelf = StateSelf & {
@@ -313,18 +323,18 @@ class ActiveState extends StateInfo <ActiveSelf>  {
     })
   }
 
-  get step() {
-    const [{ step }] = this.self.stack
-    return step
+  get phase() {
+    const [{ phase }] = this.self.stack
+    return phase
   }
 
   next() {
-    const [ { task, step }, ...stack ] = this.self.stack
+    const [ { task, phase }, ...stack ] = this.self.stack
 
     return this.build ({
       ...this.self,
       stack: [
-        new CallInfo (task, step + 1),
+        new CallInfo (task, phase + 1),
         ...stack,
       ]
     })
@@ -388,6 +398,7 @@ class ActiveState extends StateInfo <ActiveSelf>  {
   }
 }
 
+// #endregion
 
 // STORE DEFINITION
 
@@ -426,8 +437,8 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   if (effect instanceof UseAtomicEffect) {
     return reduceUseAtomic (state, effect)
   }
-  else if (effect instanceof UseStepEffect) {
-    return reduceUseStep (state, effect)
+  else if (effect instanceof UsePhaseEffect) {
+    return reduceUsePhase (state, effect)
   }
   else if (effect instanceof UseUpdateEffect) {
     return reduceUseUpdate (state, effect)
@@ -536,6 +547,8 @@ export function extendStore (...args: Parameters <typeof _extendStore>) {
   return _extendStore (...args)
 }
 
+// #region Handle Effects
+
 /**
  * Catch-all for unhandled side effects...
  */
@@ -553,6 +566,7 @@ export const handleEffectAsync = extendStore (async function* (effect: Effect) {
   return yield* effect
 })
 
+// #endregion
 
 // #region Atomic Functions
 
@@ -682,12 +696,12 @@ class CleanEdge extends EdgeInfo {
 
 // #endregion
 
-// #region Steps
+// #region Phases
 // for storing info within a node
 
-abstract class StepInfo {}
+abstract class PhaseInfo {}
 
-class ValueStep extends StepInfo {
+class ValuePhase extends PhaseInfo {
   constructor (
     public readonly current: any,
   ) {
@@ -695,8 +709,8 @@ class ValueStep extends StepInfo {
   }
 }
 
-class UpdateStep extends StepInfo {
-  readonly id = Symbol(`step:${guidBy({})}`)
+class UpdatePhase extends PhaseInfo {
+  readonly id = Symbol(`phase:${guidBy({})}`)
 
   constructor () {
     super()
@@ -709,29 +723,29 @@ class UpdateStep extends StepInfo {
 
 abstract class NodeInfo {
   abstract edge: EdgeInfo
-  protected abstract steps: StepInfo[]
+  protected abstract phases: PhaseInfo[]
 
   abstract withStatus (status: Status): CleanNode
 
-  has (step: symbol) {
-    return this.steps.some ((x) => x instanceof UpdateStep && x.id === step)
+  has (phase: symbol) {
+    return this.phases.some ((x) => x instanceof UpdatePhase && x.id === phase)
   }
 }
 
 class DirtyNode extends NodeInfo {
   constructor (
     public readonly edge: EdgeInfo,
-    protected readonly steps: StepInfo[],
+    protected readonly phases: PhaseInfo[],
   ) {
     super()
   }
 
-  withStep <T extends StateInfo> (state: T, step: StepInfo): T {
+  withPhase <T extends StateInfo> (state: T, phase: PhaseInfo): T {
     const nextState = state
       .nodes.without (x => x === this)
       .withNode (new DirtyNode (this.edge, [
-        ...this.steps,
-        step,
+        ...this.phases,
+        phase,
       ]))
 
     return nextState as T
@@ -742,7 +756,7 @@ class DirtyNode extends NodeInfo {
       throw new Error ("[DirtyNode::withStatus] not a clean edge")
     }
 
-    return new CleanNode (this.edge, status, this.steps)
+    return new CleanNode (this.edge, status, this.phases)
   }
 }
 
@@ -750,19 +764,19 @@ class CleanNode extends NodeInfo {
   constructor (
     public readonly edge: CleanEdge,
     public readonly status: Status,
-    protected readonly steps: StepInfo[],
+    protected readonly phases: PhaseInfo[],
   ) {
     super()
   }
 
   at (index: number) {
-    const step = this.steps.find ((_, i) => i === index)
-    if (!step) throw new Error ("[step] not found")
-    return step
+    const phase = this.phases.find ((_, i) => i === index)
+    if (!phase) throw new Error ("[phase] not found")
+    return phase
   }
 
   withStatus (status: Status) {
-    return new CleanNode (this.edge, status, this.steps)
+    return new CleanNode (this.edge, status, this.phases)
   }
 }
 
@@ -780,7 +794,7 @@ class ViewInfo {
 class CallInfo {
   constructor (
     public readonly task: symbol,
-    public readonly step: number,
+    public readonly phase: number,
   ) {}
 }
 
@@ -1281,14 +1295,14 @@ REDISPATCHER.use = function use (usable: any) {
 
 // #endregion
 
-// #region StepInfo & _use
+// #region PhaseInfo & _use
 
 const NEVER = doo (() => {
   class Never {}
   return new Never() as any
 })
 
-export class UseStepEffect extends Effect <any> {
+export class UsePhaseEffect extends Effect <any> {
   constructor (
     public factory: Func0,
   ) {
@@ -1297,34 +1311,34 @@ export class UseStepEffect extends Effect <any> {
 }
 
 REDISPATCHER._use = extendStore (function* (factory: Func0) {
-  return yield* new UseStepEffect (factory)
+  return yield* new UsePhaseEffect (factory)
 })
 
-function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
+function reduceUsePhase (state: ActiveState, effect: UsePhaseEffect) {
   const task = state.peek()
 
   const node = state.nodes.get (x => x.edge.equals (task.edge))
 
   if (node instanceof DirtyNode) {
     const value = effect.factory()
-    state = node.withStep (state, new ValueStep (value))
+    state = node.withPhase (state, new ValuePhase (value))
 
     effect.return (value)
     return state.next()
   }
   
   else if (node instanceof CleanNode) {
-    const step = node.at (state.step)
+    const phase = node.at (state.phase)
 
-    if (! (step instanceof ValueStep)) {
-      throw new Error ("[reduceUseStep] step not found")
+    if (! (phase instanceof ValuePhase)) {
+      throw new Error ("[reduceUsePhase] phase not found")
     }
 
-    effect.return (step.current)
+    effect.return (phase.current)
     return state.next()
   }
 
-  throw new Error ("[reduceUseStep] unknown node")
+  throw new Error ("[reduceUsePhase] unknown node")
 }
 
 /**
@@ -1358,15 +1372,15 @@ class UseUpdateEffect extends Effect <symbol> {
 
 class ForceUpdateEffect extends Effect <void> {
   constructor (
-    public readonly step: symbol,
+    public readonly phase: symbol,
   ) {
     super()
   }
 }
 
-const forceUpdateBy = memoize ((step: symbol) => {
+const forceUpdateBy = memoize ((phase: symbol) => {
   return function forceUpdate () {
-    handleEffect (new ForceUpdateEffect (step))
+    handleEffect (new ForceUpdateEffect (phase))
     resyncAll()
   }
 })
@@ -1377,8 +1391,8 @@ REDISPATCHER.useUpdate = function _useUpdate () {
 }
 
 function reduceForceUpdate (state: StateInfo, effect: ForceUpdateEffect) {
-  const { step } = effect
-  const node = state.findNodeByStep (step)
+  const { phase } = effect
+  const node = state.findNodeByPhase (phase)
   console.log ("found node", node)
 
   if (! (node instanceof CleanNode)) {
@@ -1398,20 +1412,20 @@ function reduceUseUpdate (state: ActiveState, effect: UseUpdateEffect) {
   const node = state.nodes.get (x => x.edge.equals (task.edge))
 
   if (node instanceof DirtyNode) {
-    const step = new UpdateStep()
-    state = node.withStep (state, step)
+    const phase = new UpdatePhase()
+    state = node.withPhase (state, phase)
 
-    effect.return (step.id)
+    effect.return (phase.id)
     return state.next()
   }
   else if (node instanceof CleanNode) {
-    const step = node.at (state.step)
+    const phase = node.at (state.phase)
 
-    if (! (step instanceof UpdateStep)) {
-      throw new Error ("[reduceUseUpdate] step not found")
+    if (! (phase instanceof UpdatePhase)) {
+      throw new Error ("[reduceUseUpdate] phase not found")
     }
 
-    effect.return (step.id)
+    effect.return (phase.id)
     return state.next()
   }
 
