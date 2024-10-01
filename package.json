@@ -1,17 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "dev": "pnpm hello:vite",
-    "hello:legacy": "nx dev hello-legacy",
-    "hello:next": "nx dev hello-next",
-    "hello:vite": "nx dev hello-vite",
-    "hello:test": "nx test hello-vite",
-    "hello:build": "nx build hello-vite",
-    "lolalemon:next": "nx dev lolalemon-next",
-    "lolalemon:vite": "nx dev lolalemon-vite",
-    "lolalemon:test": "nx test lolalemon-vite",
-    "pokedex:next": "nx dev pokedex-next",
-    "tweeter:legacy": "nx dev tweeter-legacy"
+    "dev": "nx dev hello-world",
+    "test": "nx test testing-only"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "*",
@@ -23,8 +14,9 @@
     "@types/react-dom": "npm:types-react-dom@rc",
     "@types/uuid": "^9.0.6",
     "eslint": "^8.52.0",
+    "autoprefixer": "10.4.20",
     "eslint-config-next": "latest",
-    "jsdom": "*",
+    "jsdom": "^25.0.1",
     "next": "rc",
     "nx": "^17.0.2",
     "typescript": "^5.2.2",
