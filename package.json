@@ -1,9 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "dev": "nx dev hello-vite",
+    "dev": "nx dev hello-world",
     "nx": "nx",
-    "test": "nx test hello-vite"
+    "test": "nx test testing-only"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "*",
@@ -15,8 +15,9 @@
     "@types/react-dom": "npm:types-react-dom@rc",
     "@types/uuid": "^9.0.6",
     "eslint": "^8.52.0",
+    "autoprefixer": "10.4.20",
     "eslint-config-next": "latest",
-    "jsdom": "*",
+    "jsdom": "^25.0.1",
     "next": "rc",
     "nx": "^17.0.2",
     "typescript": "^5.2.2",
