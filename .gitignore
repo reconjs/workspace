@@ -45,4 +45,4 @@ examples/terris
 **/*.log
 
 **/__generated__
-
+**/*.timestamp

@@ -323,7 +323,7 @@ const INIT_STATE = new StateInfo ({
 type List <T> = [ T, ...T[] ]
 
 type ActiveSelf = StateSelf & {
-  stack: List <CallInfo>
+  stack: List <CallInfo>,
   dispatcher: ReactDispatcher|null,
 }
 

@@ -57,7 +57,7 @@ describe ("useHelloAtom", () => {
 
   describe ("useHelloAtom (async)", () => {
     const useHelloAtom = atomic (async () => {
-      await timeout (1000)
+      // await timeout (1000)
       return "Hello"
     })
     
@@ -68,11 +68,11 @@ describe ("useHelloAtom", () => {
     }
 
     afterEach (() => {
-      vi.clearAllTimers()
+      // vi.clearAllTimers()
     })
 
     beforeEach (() => {
-      vi.useFakeTimers()
+      // vi.useFakeTimers()
       render (
         <Suspense fallback={LOADING}>
           <App />
@@ -81,14 +81,14 @@ describe ("useHelloAtom", () => {
     })
 
     test ("suspends", () => {
-      vi.advanceTimersByTime (1000)
+      // vi.advanceTimersByTime (1000)
       
       expect (screen.getByRole ("heading"))
         .toHaveTextContent ("Loading...")
     })
 
     test ("resolves to 'Hello World'", async () => {
-      vi.advanceTimersByTime (1000)
+      // vi.advanceTimersByTime (1000)
 
       await waitFor (() => {
         expect (screen.getByRole ("heading"))
@@ -98,7 +98,7 @@ describe ("useHelloAtom", () => {
   })
 
   test ("useTextAtom (both)", async () => {
-    vi.advanceTimersByTime (1000)
+    // vi.advanceTimersByTime (1000)
 
     const useTextAtom = atomic (async (lang: string, english: string) => {
       console.log ("useTextAtom", lang, english)

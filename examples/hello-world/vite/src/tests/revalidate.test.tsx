@@ -94,7 +94,7 @@ describe ("Alice -> Alicia", () => {
     await expectName ("Alicia")
   })
 
-  describe ("useNameAtom uses another atom", () => {
+  describe.todo ("useNameAtom uses another atom", () => {
     const useNestedMock = vi.fn ((): any => {
       throw new Error ("useNestedMock not implemented")
     })

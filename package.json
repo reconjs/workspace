@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "nx dev hello-vite",
+    "nx": "nx",
     "test": "nx test hello-vite"
   },
   "devDependencies": {
