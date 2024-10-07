@@ -1,4 +1,4 @@
-import { Func, memoize } from "@reconjs/utils"
+import { Func } from "@reconjs/utils"
 import { Returns } from "./types"
 import { 
   createContext,
@@ -7,12 +7,9 @@ import {
   use,
   MemoExoticComponent,
   useEffect,
-  useSyncExternalStore,
 } from "react"
-import { CallEffect, Effect, remit } from "./effect"
-import { _use, Dispatcher } from "./state"
-import { performEntrypoint } from "./state"
-import { subscribe } from "diagnostics_channel"
+import { Effect } from "./effect"
+import { _use, Dispatcher, performEntrypoint, ScopeSymbol } from "./state"
 import { useResync } from "./resync"
 
 const WINDOW = typeof window !== "undefined" 
@@ -53,8 +50,8 @@ export type Atom <T> = Promise<T> & {
 
 // CONTEXT
 
-const ROOT = Symbol()
-const ReconContext = createContext <symbol> (ROOT)
+const ROOT = new ScopeSymbol()
+const ReconContext = createContext <ScopeSymbol> (ROOT)
 
 
 
