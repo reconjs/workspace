@@ -8,6 +8,5 @@
   ],
   "editor.tabSize": 2,
   "editor.detectIndentation": false,
-  "vitest.workspaceConfig": "vitest.workspace.js",
-  "git.rebaseWhenSync": false
+  "vitest.workspaceConfig": "vitest.workspace.js"
 }
