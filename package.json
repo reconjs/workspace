@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "nx dev hello-world",
+    "nx": "nx",
     "test": "nx test testing-only"
   },
   "devDependencies": {

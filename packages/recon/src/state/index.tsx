@@ -1,4 +1,4 @@
-import { Func, Func0, guidBy, loadPromise, memoize, range, Vunc } from "@reconjs/utils"
+import { AnyFunction, Func, Func0, guidBy, loadPromise, memoize, range, Vunc } from "@reconjs/utils"
 import React, { 
   DependencyList, 
   memo, 
@@ -13,6 +13,8 @@ import { Atom } from "../atomic"
 import { faulty } from "./fault"
 import { resyncAll } from "../resync"
 
+// #region utils
+
 const WINDOW = typeof window !== "undefined" 
   ? window as any 
   : null
@@ -22,16 +24,16 @@ function doo <T> (func: () => T) {
 }
 
 function* loop (debug: string) {
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 20; i++) {
     yield null
   }
   
   throw new Error (`[loop] too much (${debug})`)
 }
 
+// #endregion
 
-
-// HOOKS
+// #region Hooks Types
 
 export type ReactHooks = {
   useActionState: (action: Func, init: any) => [ any, Vunc <[ any ]> ],
@@ -72,9 +74,9 @@ export type ReconDispatcher = ReactHooks & ReconHooks & {
 
 const REDISPATCHER = {} as ReconDispatcher
 
+// #endregion
 
-
-// REACT INTERNALS
+// #region React Internals
 
 const COMPONENT_TYPE = doo (() => {
   const UNRENDERED = memo (() => null)
@@ -84,7 +86,7 @@ const COMPONENT_TYPE = doo (() => {
 // @ts-ignore
 const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
 if (!internals) {
-  console.log (Object.keys (React))
+  // console.log (Object.keys (React))
   throw new Error ("INTERNALS NOT FOUND")
 }
 
@@ -97,9 +99,9 @@ export const Dispatcher = {
   }
 }
 
+// #endregion
 
-
-// STORE STATE/TYPES
+// #region Bunch & substate
 
 class Bunch <T> {
   constructor (private items: T[] = []) {}
@@ -158,17 +160,34 @@ function substate <T> (read: () => Bunch <T>) {
   }
 }
 
+// #endregion
+
 const EMPTY = new Bunch <any> ([])
+
+abstract class InternalSymbol {
+  private guid = guidBy ("node:" + guidBy({}))
+
+  toString() {
+    return this.guid
+  }
+}
+
+export class ScopeSymbol extends InternalSymbol {}
+class NodeSymbol extends InternalSymbol {}
+class TaskSymbol extends InternalSymbol {}
 
 type StateSelf = {
   entries: Bunch <EntrypointInfo>,
   pointers: Bunch <PointerInfo>,
   nodes: Bunch <NodeInfo>,
-  procs: Bunch <ProcInfo>,
+  nodules: Bunch <NoduleInfo>,
+  steps: Bunch <StepInfo>,
   suspenses: Bunch <SuspenseInfo>,
   tasks: Bunch <TaskInfo>,
   errors: Bunch <Error>,
 }
+
+// #region StateInfo
 
 class StateInfo <S extends StateSelf = StateSelf> {
   constructor (protected readonly self: S) {}
@@ -177,7 +196,7 @@ class StateInfo <S extends StateSelf = StateSelf> {
     return new StateInfo <S> (self)
   }
 
-  push (id: symbol) {
+  push (id: TaskSymbol) {
     const dispatcher = Dispatcher.current ?? null
     Dispatcher.current = REDISPATCHER
 
@@ -203,9 +222,14 @@ class StateInfo <S extends StateSelf = StateSelf> {
       .withBuild ((nodes) => this.build ({ ...this.self, nodes }))
   }
 
-  get procs() {
-    return substate (() => this.self.procs)
-      .withBuild ((procs) => this.build ({ ...this.self, procs }))
+  get nodules() {
+    return substate (() => this.self.nodules)
+      .withBuild ((nodules) => this.build ({ ...this.self, nodules }))
+  }
+
+  get steps() {
+    return substate (() => this.self.steps)
+      .withBuild ((steps) => this.build ({ ...this.self, steps }))
   }
 
   get suspenses () {
@@ -238,20 +262,20 @@ class StateInfo <S extends StateSelf = StateSelf> {
     }
   }
 
-  findNodeByStep (step: symbol) {
-    return this.nodes.find ((node) => {
-      return node.has (step)
+  findNoduleByPhase (phase: symbol) {
+    return this.nodules.find ((nodule) => {
+      return nodule.has (phase)
     })
   }
 
-  withNode (node: NodeInfo) {
-    const found = this.self.nodes
-      .find ((x) => x.edge.equals (node.edge))
+  withNodule (nodule: NoduleInfo) {
+    const found = this.self.nodules
+      .find ((x) => x.edge.equals (nodule.edge))
 
     return this.build ({
       ...this.self,
-      nodes: this.self.nodes
-        .with (node)
+      nodules: this.self.nodules
+        .with (nodule)
         .without (x => x === found)
     })
   }
@@ -268,13 +292,14 @@ class StateInfo <S extends StateSelf = StateSelf> {
   }
 
   log () {
-    this.self.entries.log ("entries")
-    this.self.pointers.log ("pointers")
-    this.self.nodes.log ("nodes")
-    this.self.procs.log ("procs")
-    this.self.suspenses.log ("suspenses")
-    this.self.tasks.log ("tasks")
-    this.self.errors.log ("errors")
+    for (const [ key, val ] of Object.entries (this.self)) {
+      if (val instanceof Bunch) {
+        val.log (key)
+      }
+      else {
+        console.log (`${key}:`, val)
+      }
+    }
   }
 
   validate() {}
@@ -284,16 +309,21 @@ const INIT_STATE = new StateInfo ({
   entries: EMPTY,
   pointers: EMPTY,
   nodes: EMPTY,
-  procs: EMPTY,
+  nodules: EMPTY,
+  steps: EMPTY,
   suspenses: EMPTY,
   tasks: EMPTY,
   errors: EMPTY,
 })
 
+// #endregion
+
+// #region ActiveState
+
 type List <T> = [ T, ...T[] ]
 
 type ActiveSelf = StateSelf & {
-  stack: List <CallInfo>
+  stack: List <CallInfo>,
   dispatcher: ReactDispatcher|null,
 }
 
@@ -313,18 +343,18 @@ class ActiveState extends StateInfo <ActiveSelf>  {
     })
   }
 
-  get step() {
-    const [{ step }] = this.self.stack
-    return step
+  get phase() {
+    const [{ phase }] = this.self.stack
+    return phase
   }
 
   next() {
-    const [ { task, step }, ...stack ] = this.self.stack
+    const [ { task, phase }, ...stack ] = this.self.stack
 
     return this.build ({
       ...this.self,
       stack: [
-        new CallInfo (task, step + 1),
+        new CallInfo (task, phase + 1),
         ...stack,
       ]
     })
@@ -338,7 +368,7 @@ class ActiveState extends StateInfo <ActiveSelf>  {
     return task
   }
 
-  push (id: symbol) {
+  push (id: TaskSymbol) {
     const found = this.self.stack.find (x => x.task === id)
     if (found) throw new Error ("[ActiveState] can't push")
 
@@ -369,7 +399,6 @@ class ActiveState extends StateInfo <ActiveSelf>  {
 
   log () {
     super.log()
-    console.log ("stack", this.self.stack)
   }
 
   validate () {
@@ -388,6 +417,7 @@ class ActiveState extends StateInfo <ActiveSelf>  {
   }
 }
 
+// #endregion
 
 // STORE DEFINITION
 
@@ -396,6 +426,7 @@ class ActiveState extends StateInfo <ActiveSelf>  {
 export class InviewStartEffect extends Effect <void> {}
 export class InviewEndEffect extends Effect <void> {}
 
+/*
 function reduceInviewEnd (state: StateInfo, effect: InviewEndEffect) {
   const { inview, ..._state } = state
   if (!inview) throw new Error ("[InviewEndEffect] No inview")
@@ -419,6 +450,7 @@ function reduceInviewStart (state: StateInfo, effect: InviewStartEffect) {
     },
   }
 }
+*/
 
 // #endregion
 
@@ -426,8 +458,8 @@ function reduceActiveState (state: ActiveState, effect: Effect): StateInfo {
   if (effect instanceof UseAtomicEffect) {
     return reduceUseAtomic (state, effect)
   }
-  else if (effect instanceof UseStepEffect) {
-    return reduceUseStep (state, effect)
+  else if (effect instanceof UsePhaseEffect) {
+    return reduceUsePhase (state, effect)
   }
   else if (effect instanceof UseUpdateEffect) {
     return reduceUseUpdate (state, effect)
@@ -449,18 +481,20 @@ function reduceState (state: StateInfo, effect: Effect): StateInfo {
     return state
     // return reduceInviewStart (state, effect)
   }
-  
+  else if (effect instanceof ProcEffect) {
+    return reduceProc (state, effect)
+  }
   else if (effect instanceof EntrypointEffect) {
     return reduceEntrypoint (state, effect)
   }
   else if (effect instanceof AtomEffect) {
     return reduceAtom (state, effect)
   }
-  else if (effect instanceof UpdateEffect) {
-    return reduceUpdate (state, effect)
+  else if (effect instanceof StatusSyncEffect) {
+    return reduceStatusSync (state, effect)
   }
-  else if (effect instanceof AsyncUpdateEffect) {
-    return reduceUpdateAsync (state, effect)
+  else if (effect instanceof StatusAsyncEffect) {
+    return reduceStatusAsync (state, effect)
   }
   else if (effect instanceof RevalidateEffect) {
     return reduceRevalidate (state, effect)
@@ -489,31 +523,17 @@ const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
 
   let nextState = state
 
-  function dump (msg: string) {
-    console.error (msg)
-
-    console.group ("Prev State")
-    state.log()
-    console.groupEnd()
-
-    if (nextState !== state) {
-      console.group ("Next State")
-      nextState.log()
-      console.groupEnd()
-    }
-  }
-
-  console.group ("extendStore")
+  // console.group ("extendStore")
   
   try {
-    console.log ("active:", state instanceof ActiveState)
-    console.log ("effect:", effect)
+    // console.log ("active:", state instanceof ActiveState)
+    // console.log ("effect:", effect)
 
     try {
       nextState = reduceState (state, effect)
     }
     catch (err) {
-      dump ("error while reducing")
+      // dump ("error while reducing")
       throw err
     }
 
@@ -521,20 +541,22 @@ const _extendStore = defineStore (INIT_STATE, (state, effect): StateInfo => {
       nextState.validate()
     }
     catch (err) {
-      dump ("error while validating")
+      // dump ("error while validating")
       throw err
     }
 
     return nextState
   }
   finally {
-    console.groupEnd()
+    // console.groupEnd()
   }
 })
 
 export function extendStore (...args: Parameters <typeof _extendStore>) {
   return _extendStore (...args)
 }
+
+// #region Handle Effects
 
 /**
  * Catch-all for unhandled side effects...
@@ -553,27 +575,6 @@ export const handleEffectAsync = extendStore (async function* (effect: Effect) {
   return yield* effect
 })
 
-
-// #region Atomic Functions
-
-class ProcInfo {
-  constructor (
-    public readonly func: Func
-  ) {}
-}
-
-class ValueProc extends ProcInfo {
-  constructor (func: Func) {
-    super (func)
-  }
-}
-
-class AsyncProc extends ProcInfo {
-  constructor (func: Func) {
-    super (func)
-  }
-}
-
 // #endregion
 
 // #region Params
@@ -587,7 +588,7 @@ abstract class ArgInfo {
 
 class AtomArg extends ArgInfo {
   constructor (
-    public readonly scope: symbol,
+    public readonly scope: ScopeSymbol,
     public readonly func: Func,
     public readonly args: ArgInfo[],
   ) {
@@ -613,7 +614,7 @@ abstract class ParamInfo extends ArgInfo {}
 
 class AtomParam extends ParamInfo {
   constructor (
-    public readonly scope: symbol,
+    public readonly scope: ScopeSymbol,
     public readonly func: Func,
     public readonly args: ParamInfo[],
   ) {
@@ -647,20 +648,20 @@ class ValueParam extends ParamInfo {
 
 class EdgeInfo {
   constructor (
-    public readonly scope: symbol,
-    public readonly func: Func,
+    public readonly scope: ScopeSymbol,
+    public readonly proc: ProcStepSymbol,
     public readonly args: ArgInfo[],
   ) {
     const isValid = args.every ((arg) => arg instanceof ArgInfo)
     if (!isValid) {
-      console.log ("[EdgeInfo]", scope, func, args)
+      console.log ("[EdgeInfo]", scope, proc, args)
       throw new Error ("[EdgeInfo] invalid args")
     }
   }
 
   equals (other: EdgeInfo) {
     if (this.scope !== other.scope) return false
-    if (this.func !== other.func) return false
+    if (this.proc !== other.proc) return false
     if (this.args.length !== other.args.length) return false
 
     for (const i of range (this.args.length)) {
@@ -672,22 +673,155 @@ class EdgeInfo {
 
 class CleanEdge extends EdgeInfo {
   constructor (
-    scope: symbol,
-    func: Func,
+    scope: ScopeSymbol,
+    proc: ProcStepSymbol,
     args: ParamInfo[],
   ) {
-    super (scope, func, args)
+    super (scope, proc, args)
   }
 }
 
 // #endregion
 
 // #region Steps
-// for storing info within a node
 
-abstract class StepInfo {}
+class ArgType {}
 
-class ValueStep extends StepInfo {
+class AtomArgType extends ArgType {
+  constructor (
+    public readonly proc: ProcStepSymbol,
+  ) {
+    super()
+  }
+}
+
+abstract class StepSymbol extends InternalSymbol {}
+
+abstract class StepInfo {
+	abstract id: StepSymbol
+}
+
+abstract class CellInfo {
+  abstract readonly step: StepSymbol
+  abstract readonly node: NodeSymbol
+}
+
+// #endregion
+
+// #region Proc
+
+class ProcStepSymbol extends StepSymbol {}
+
+class ProcStep extends StepInfo {
+	constructor (
+    public readonly id: ProcStepSymbol,
+		public readonly proc: AnyFunction,
+		public readonly args: ArgType[],
+	) {
+    super()
+  }
+}
+
+class ProcEffect extends Effect <ProcStepSymbol> {
+  constructor (
+    public readonly func: AnyFunction,
+    public readonly args: any[],
+  ) {
+    super()
+  }
+}
+
+function reduceProc (state: StateInfo, effect: ProcEffect) {
+  const step = state.steps
+    .find (x => x instanceof ProcStep && x.proc === effect.func)
+
+  if (step) {
+    effect.return (step.id)
+    return state
+  }
+
+  const argtypes = effect.args.map ((arg) => {
+    const found = state.pointers.find (x => x.atom === arg)
+
+    if (found instanceof EdgePointer) {
+      return new AtomArgType (found.edge.proc)
+    }
+    else if (found instanceof EntryPointer) {
+      const entry = state.entries.get (x => x.id === found.id)
+      return new AtomArgType (entry.edge.proc)
+    }
+    else {
+      return new ArgType()
+    }
+  })
+
+  const id = new ProcStepSymbol()
+  return state.steps.with (new ProcStep (id, effect.func, argtypes))
+}
+
+// #endregion
+
+// #region Nodes
+
+abstract class NodeInfo {
+  abstract id: NodeSymbol
+  abstract edge: EdgeInfo
+}
+
+class DirtyNode extends NodeInfo {
+  constructor (
+    public readonly id: NodeSymbol,
+    public readonly edge: EdgeInfo,
+  ) {
+    super()
+  }
+}
+
+class CleanNode extends NodeInfo {
+  constructor (
+    public readonly id: NodeSymbol,
+    public readonly edge: CleanEdge,
+  ) {
+    super()
+  }
+}
+
+// #endregion
+
+// #region Last Step
+
+class LastStepSymbol extends StepSymbol {}
+
+class LastStep extends StepInfo {
+  id = new LastStepSymbol()
+
+	constructor (
+		public readonly prev: StepInfo,
+	) {
+    super()
+  }
+}
+
+class LastCell extends CellInfo {
+  constructor (
+    public readonly step: LastStepSymbol,
+    public readonly node: NodeSymbol,
+    public readonly status: Status,
+  ) {
+    super()
+  }
+}
+
+// #endregion
+
+// --- OLD ---
+
+// #region Phases
+// for storing info within a nodule
+
+abstract class PhaseInfo {}
+
+class ValuePhase extends PhaseInfo {
   constructor (
     public readonly current: any,
   ) {
@@ -695,8 +829,8 @@ class ValueStep extends StepInfo {
   }
 }
 
-class UpdateStep extends StepInfo {
-  readonly id = Symbol(`step:${guidBy({})}`)
+class UpdatePhase extends PhaseInfo {
+  readonly id = Symbol(`phase:${guidBy({})}`)
 
   constructor () {
     super()
@@ -705,33 +839,33 @@ class UpdateStep extends StepInfo {
 
 // #endregion
 
-// #region Nodes
+// #region Nodules
 
-abstract class NodeInfo {
+abstract class NoduleInfo {
   abstract edge: EdgeInfo
-  protected abstract steps: StepInfo[]
+  protected abstract phases: PhaseInfo[]
 
-  abstract withStatus (status: Status): CleanNode
+  abstract withStatus (status: Status): CleanNodule
 
-  has (step: symbol) {
-    return this.steps.some ((x) => x instanceof UpdateStep && x.id === step)
+  has (phase: symbol) {
+    return this.phases.some ((x) => x instanceof UpdatePhase && x.id === phase)
   }
 }
 
-class DirtyNode extends NodeInfo {
+class DirtyNodule extends NoduleInfo {
   constructor (
     public readonly edge: EdgeInfo,
-    protected readonly steps: StepInfo[],
+    protected readonly phases: PhaseInfo[],
   ) {
     super()
   }
 
-  withStep <T extends StateInfo> (state: T, step: StepInfo): T {
+  withPhase <T extends StateInfo> (state: T, phase: PhaseInfo): T {
     const nextState = state
-      .nodes.without (x => x === this)
-      .withNode (new DirtyNode (this.edge, [
-        ...this.steps,
-        step,
+      .nodules.without (x => x === this)
+      .withNodule (new DirtyNodule (this.edge, [
+        ...this.phases,
+        phase,
       ]))
 
     return nextState as T
@@ -739,30 +873,30 @@ class DirtyNode extends NodeInfo {
 
   withStatus (status: Status) {
     if (! (this.edge instanceof CleanEdge)) {
-      throw new Error ("[DirtyNode::withStatus] not a clean edge")
+      throw new Error ("[DirtyNodule::withStatus] not a clean edge")
     }
 
-    return new CleanNode (this.edge, status, this.steps)
+    return new CleanNodule (this.edge, status, this.phases)
   }
 }
 
-class CleanNode extends NodeInfo {
+class CleanNodule extends NoduleInfo {
   constructor (
     public readonly edge: CleanEdge,
     public readonly status: Status,
-    protected readonly steps: StepInfo[],
+    protected readonly phases: PhaseInfo[],
   ) {
     super()
   }
 
-  step (index: number) {
-    const step = this.steps.find ((_, i) => i === index)
-    if (!step) throw new Error ("[step] not found")
-    return step
+  at (index: number) {
+    const phase = this.phases.find ((_, i) => i === index)
+    if (!phase) throw new Error ("[phase] not found")
+    return phase
   }
 
   withStatus (status: Status) {
-    return new CleanNode (this.edge, status, this.steps)
+    return new CleanNodule (this.edge, status, this.phases)
   }
 }
 
@@ -779,13 +913,13 @@ class ViewInfo {
 
 class CallInfo {
   constructor (
-    public readonly task: symbol,
-    public readonly step: number,
+    public readonly task: TaskSymbol,
+    public readonly phase: number,
   ) {}
 }
 
 class TaskInfo {
-  id = Symbol(`task:${guidBy({})}`)
+  id = new TaskSymbol()
 
   constructor (
     public readonly edge: EdgeInfo,
@@ -803,14 +937,17 @@ class RenderTask extends TaskInfo {
 
 class TaskEffect extends Effect <void> {
   constructor (
-    public readonly id: symbol,
+    public readonly id: TaskSymbol,
   ) {
     super()
   }
 }
 
 function reduceTask (state: StateInfo, effect: TaskEffect) {
-  effect.return()
+  effect.return
+  const task = state.tasks.find (x => x.id === effect.id)
+
+  if (!task) return state  
   return state.push (effect.id)
 }
 
@@ -820,14 +957,14 @@ function reduceTask (state: StateInfo, effect: TaskEffect) {
 
 class SuspenseInfo {
   constructor (
-    public readonly task: symbol,
+    public readonly task: TaskSymbol,
     public readonly status: Pending,
   ) {}
 }
 
 class UnsuspenseEffect extends Effect <void> {
   constructor (
-    public readonly task: symbol,
+    public readonly task: TaskSymbol,
   ) {
     super()
   }
@@ -851,23 +988,30 @@ function reduceSuspense (state: ActiveState, effect: SuspenseEffect) {
   effect.return()
 
   effect.status.promise.then (() => {
-    handleEffect (new UnsuspenseEffect (task.id))
+    try {
+      handleEffect (new UnsuspenseEffect (task.id))
+    }
+    catch (err) {
+      console.error ("[reduceSuspense] logging the error", err)
+    }
   })
+
+  const hasSuspense = !!state.suspenses.find (x => x.task === task.id)
+
+  if (!hasSuspense) {
+    // @ts-ignore
+    state = state.suspenses.with (new SuspenseInfo (task.id, effect.status))
+  }
 
   // TODO: Should we not have tasks?
   return state.pop()
-    .suspenses.with (new SuspenseInfo (task.id, effect.status))
-    .nodes.without (x => x.edge.equals (task.edge) && x instanceof DirtyNode)
+    .nodules.without (x => x.edge.equals (task.edge) && x instanceof DirtyNodule)
 }
 
 // #endregion
 
+// #region Status
 
-// #region Atoms
-
-/**
- * Pending
- */
 abstract class Status {}
 
 class Pending extends Status {
@@ -894,15 +1038,34 @@ class Rejected extends Status {
   }
 }
 
-class AtomEffect extends Effect <Status> {
-  constructor (
-    public readonly atom: Atom <any>
-  ) {
-    super()
-  }
-}
+const handleStatusOf = extendStore (function* (atom: Atom <any>) {
+  // console.log ("handleStatusOf")
+  const status = yield* new AtomEffect (atom)
 
-class UpdateEffect extends Effect <void> {
+  if (status instanceof Fulfilled) return "fulfilled"
+  if (status instanceof Rejected) return "rejected"
+  if (status instanceof Status) return "pending"
+
+  throw new Error ("no status")
+})
+
+const handleReasonOf = extendStore (function* (atom: Atom <any>) {
+  // console.log ("handleReasonOf")
+  const status = yield* new AtomEffect (atom)
+
+  if (status instanceof Rejected) return status.reason
+  throw new Error ("Atom was not rejected")
+})
+
+const handleValueOf = extendStore (function* (atom: Atom <any>) {
+  // console.log ("handleValueOf")
+  const status = yield* new AtomEffect (atom)
+
+  if (status instanceof Fulfilled) return status.value
+  throw new Error ("Atom was not fulfilled")
+})
+
+class StatusSyncEffect extends Effect <void> {
   constructor (
     public readonly status: Status
   ) {
@@ -910,7 +1073,7 @@ class UpdateEffect extends Effect <void> {
   }
 }
 
-class AsyncUpdateEffect extends Effect <void> {
+class StatusAsyncEffect extends Effect <void> {
   constructor (
     public readonly status: Status,
     public readonly edge: EdgeInfo,
@@ -922,52 +1085,52 @@ class AsyncUpdateEffect extends Effect <void> {
 const performLoadingOf = extendStore (async function* (atom: Atom <any>) {
   console.group ("performLoadingOf")
 
+  let rejected = false
+
   try {
     // await Promise.resolve()
     for (const _ of loop ("performLoadingOf")) {
-      console.log ("it's loading time...")
+      // console.log ("it's loading time...")
       const status = yield* new AtomEffect (atom)
 
       if (status instanceof Fulfilled) return
-      if (status instanceof Rejected) throw status.reason
-      if (status instanceof Pending) await status.promise
+      if (status instanceof Rejected) {
+        rejected = true
+        // throw status.reason
+        console.error ("[performLoadingOf] rejected", status.reason)
+      }
+      if (status instanceof Pending) {
+        try {
+          await status.promise
+        }
+        catch (err) {}
+      }
       else {
         console.error ("[performLoadingOf] unknown status", status)
         throw new Error ("[performLoadingOf] unknown status")
       }
     }
   }
+  catch (err) {
+    if (rejected) throw err
+    console.error (err)
+  }
   finally {
     console.groupEnd()
   }
 })
 
-const handleStatusOf = extendStore (function* (atom: Atom <any>) {
-  console.log ("handleStatusOf")
-  const status = yield* new AtomEffect (atom)
+// #endregion
 
-  if (status instanceof Fulfilled) return "fulfilled"
-  if (status instanceof Rejected) return "rejected"
-  if (status instanceof Status) return "pending"
+// #region Atoms
 
-  throw new Error ("no status")
-})
-
-const handleReasonOf = extendStore (function* (atom: Atom <any>) {
-  console.log ("handleReasonOf")
-  const status = yield* new AtomEffect (atom)
-
-  if (status instanceof Rejected) return status.reason
-  throw new Error ("Atom was not rejected")
-})
-
-const handleValueOf = extendStore (function* (atom: Atom <any>) {
-  console.log ("handleValueOf")
-  const status = yield* new AtomEffect (atom)
-
-  if (status instanceof Fulfilled) return status.value
-  throw new Error ("Atom was not fulfilled")
-})
+class AtomEffect extends Effect <Status> {
+  constructor (
+    public readonly atom: Atom <any>
+  ) {
+    super()
+  }
+}
 
 function createAtom() {
   const atom: any = doo (async () => {
@@ -1017,35 +1180,35 @@ function createAtom() {
   return atom
 }
 
-function reduceUpdate (state: StateInfo, effect: UpdateEffect) {
+function reduceStatusSync (state: StateInfo, effect: StatusSyncEffect) {
   effect.return()
 
   if (! (state instanceof ActiveState)) {
-    console.error ("[reduceUpdate]", state)
-    throw new Error ("[reduceUpdate] state not active")
+    console.error ("[reduceStatusSync]", state)
+    throw new Error ("[reduceStatusSync] state not active")
   }
 
   const { edge } = state.peek()
 
-  const node = state.nodes.get (x => x.edge.equals (edge))
+  const nodule = state.nodules.get (x => x.edge.equals (edge))
 
   // TODO: Should we not have tasks?
   return state
     .pop()
     .tasks.without (x => x.edge.equals (edge))
-    .withNode (node.withStatus (effect.status))
+    .withNodule (nodule.withStatus (effect.status))
 }
 
-function reduceUpdateAsync (state: StateInfo, effect: AsyncUpdateEffect) {
+function reduceStatusAsync (state: StateInfo, effect: StatusAsyncEffect) {
   effect.return()
   // TODO: This is not going to work when we need to load args...
-  const node = state.nodes.get (x => x.edge.equals (effect.edge))
+  const nodule = state.nodules.get (x => x.edge.equals (effect.edge))
 
-  if (! (node instanceof CleanNode)) {
-    throw new Error ("[reduceUpdateAsync] not clean")
+  if (! (nodule instanceof CleanNodule)) {
+    throw new Error ("[reduceStatusAsync] not clean")
   }
 
-  return state.withNode (node.withStatus (effect.status))
+  return state.withNodule (nodule.withStatus (effect.status))
 }
 
 const performUpdate = extendStore (async function* (
@@ -1062,84 +1225,91 @@ const performUpdate = extendStore (async function* (
     }
   })
 
-  yield* new AsyncUpdateEffect (status, edge)
+  try {
+    yield* new StatusAsyncEffect (status, edge)
+  }
+  catch (err) {
+    console.error ("[performUpdate] error", err)
+  }
 })
 
-function reduceAtomAux (effect: AtomEffect, task: TaskInfo) {
-  const { func } = task.edge
-
-  const args = task.edge.args.map (arg => {
-    if (arg instanceof ValueParam) {
-      return arg.value
-    }
-
-    throw new Error ("Atom parameters are not yet supported")
-  })
-
-  effect.yield (function* () {
-    try {
-      let result: any
-      yield new TaskEffect (task.id)
-      if (func instanceof GeneratorFunction) {
-        // TODO: Intercept effects?
-        result = yield* func (...args)
-      }
-      else {
-        result = func (...args)
-      }
-
-      console.log ("[reduceAtomAux] result", result)
-
-      if (! (result instanceof Promise)) {
-        yield* new UpdateEffect (new Fulfilled (result))
-      }
-      else {
-        const promise = performUpdate (task.edge, result)
-        yield* new UpdateEffect (new Pending (promise))
-      }
-    }
-    catch (thrown) {
-      if (thrown instanceof Promise) {
-        const status = new Pending (thrown)
-        yield* new SuspenseEffect (status)
-      }
-      else {
-        yield* new UpdateEffect (new Rejected (thrown))
-      }
-    }
-  })
-}
-
 function reduceAtom (state: StateInfo, effect: AtomEffect) {
-  console.log ("reduceAtom")
+  // console.log ("reduceAtom")
 
   const edge = state.edgeOf (effect.atom)
-  const node = state.nodes.find (x => x.edge.equals (edge))
+  const nodule = state.nodules.find (x => x.edge.equals (edge))
   const task = state.tasks.find (x => x.edge.equals (edge))
 
   if (task) {
     const suspended = state.suspenses.find (x => x.task === task.id)
     if (suspended) {
-      console.log ("[reduceAtom] suspended")
+      // console.log ("[reduceAtom] suspended")
       effect.return (suspended.status)
       return state
     }
 
-    if (!node) {
-      state = state.withNode (new DirtyNode (edge, []))
+    if (!nodule) {
+      state = state.withNodule (new DirtyNodule (edge, []))
     }
-    reduceAtomAux (effect, task)
+
+    const { proc } = doo (() => {
+      const step = state.steps
+        .get (x => x instanceof ProcStep && x.id === edge.proc)
+      return step as ProcStep
+    })
+
+    effect.yield (function* () {
+      try {
+        yield new TaskEffect (task.id)
+        const args = task.edge.args.map (arg => {
+          if (arg instanceof ValueParam) {
+            return arg.value
+          }
+      
+          throw new Error ("Atom parameters are not yet supported")
+        })
+  
+        let result: any
+        if (proc instanceof GeneratorFunction) {
+          // TODO: Intercept effects?
+          result = yield* proc (...args)
+        }
+        else {
+          result = proc (...args)
+        }
+  
+        // console.log ("[reduceAtom -> yield] result", result)
+  
+        if (! (result instanceof Promise)) {
+          yield* new StatusSyncEffect (new Fulfilled (result))
+        }
+        else {
+          const promise = performUpdate (task.edge, result)
+          yield* new StatusSyncEffect (new Pending (promise))
+        }
+      }
+      catch (thrown) {
+        if (thrown instanceof Promise) {
+          const status = new Pending (thrown)
+          yield* new SuspenseEffect (status)
+        }
+        else {
+          yield* new StatusSyncEffect (new Rejected (thrown))
+        }
+      }
+    })
+
     return state
   }
   /*
-  else if (node instanceof DirtyNode) {
-    console.warn ("Unexpected dirty node w/o task")
+  else if (nodule instanceof DirtyNodule) {
+    console.warn ("Unexpected dirty nodule w/o task")
     return state
   }
   */
-  else if (node instanceof CleanNode) {
-    console.log ("found status!", node.status)
-    effect.return (node.status)
+  else if (nodule instanceof CleanNodule) {
+    // console.log ("found status!", nodule.status)
+    effect.return (nodule.status)
     return state
   }
   
@@ -1189,14 +1359,16 @@ class EntrypointEffect extends Effect <Atom <any>> {
 
 export const performEntrypoint = extendStore (function* (
   id: string,
-  scope: symbol,
+  scope: ScopeSymbol,
   func: Func,
   ...args: any[]
 ) {
+  const proc = yield* new ProcEffect (func, args)
+
   const infos = args
     .map (value => new ValueParam (value))
   // TODO: Back to EdgeInfo
-  const edge = new CleanEdge (scope, func, infos)
+  const edge = new CleanEdge (scope, proc, infos)
   return yield* new EntrypointEffect (id, edge)
 })
 
@@ -1212,7 +1384,7 @@ function reduceEntrypoint (
 
   effect.return (info.atom)
 
-  const found = state.nodes.find (x => x.edge.equals (effect.edge))
+  const found = state.nodules.find (x => x.edge.equals (effect.edge))
   if (found) return state
   return state.withTask (new TaskInfo (effect.edge))
 }
@@ -1242,11 +1414,11 @@ class RevalidateEffect extends Effect <void> {
 
 function reduceRevalidate (state: StateInfo, effect: RevalidateEffect) {
   const edge = state.edgeOf (effect.atom)
-  const node = state.nodes.get (x => x.edge.equals (edge))
+  const nodule = state.nodules.get (x => x.edge.equals (edge))
 
-  if (node instanceof DirtyNode) {
+  if (nodule instanceof DirtyNodule) {
     throw new Error ("Not implemented yet")
-    // state = state.nodes.without (x => x === node)
+    // state = state.nodules.without (x => x === nodule)
     // state = state.tasks.without (x => x.edge.equals (edge))
   }
 
@@ -1281,14 +1453,14 @@ REDISPATCHER.use = function use (usable: any) {
 
 // #endregion
 
-// #region StepInfo & _use
+// #region PhaseInfo & _use
 
 const NEVER = doo (() => {
   class Never {}
   return new Never() as any
 })
 
-export class UseStepEffect extends Effect <any> {
+export class UsePhaseEffect extends Effect <any> {
   constructor (
     public factory: Func0,
   ) {
@@ -1297,34 +1469,34 @@ export class UseStepEffect extends Effect <any> {
 }
 
 REDISPATCHER._use = extendStore (function* (factory: Func0) {
-  return yield* new UseStepEffect (factory)
+  return yield* new UsePhaseEffect (factory)
 })
 
-function reduceUseStep (state: ActiveState, effect: UseStepEffect) {
+function reduceUsePhase (state: ActiveState, effect: UsePhaseEffect) {
   const task = state.peek()
 
-  const node = state.nodes.get (x => x.edge.equals (task.edge))
+  const nodule = state.nodules.get (x => x.edge.equals (task.edge))
 
-  if (node instanceof DirtyNode) {
+  if (nodule instanceof DirtyNodule) {
     const value = effect.factory()
-    state = node.withStep (state, new ValueStep (value))
+    state = nodule.withPhase (state, new ValuePhase (value))
 
     effect.return (value)
     return state.next()
   }
   
-  else if (node instanceof CleanNode) {
-    const step = node.step (state.step)
+  else if (nodule instanceof CleanNodule) {
+    const phase = nodule.at (state.phase)
 
-    if (! (step instanceof ValueStep)) {
-      throw new Error ("[reduceUseStep] step not found")
+    if (! (phase instanceof ValuePhase)) {
+      throw new Error ("[reduceUsePhase] phase not found")
     }
 
-    effect.return (step.current)
+    effect.return (phase.current)
     return state.next()
   }
 
-  throw new Error ("[reduceUseStep] unknown node")
+  throw new Error ("[reduceUsePhase] unknown nodule")
 }
 
 /**
@@ -1358,15 +1530,15 @@ class UseUpdateEffect extends Effect <symbol> {
 
 class ForceUpdateEffect extends Effect <void> {
   constructor (
-    public readonly step: symbol,
+    public readonly phase: symbol,
   ) {
     super()
   }
 }
 
-const forceUpdateBy = memoize ((step: symbol) => {
+const forceUpdateBy = memoize ((phase: symbol) => {
   return function forceUpdate () {
-    handleEffect (new ForceUpdateEffect (step))
+    handleEffect (new ForceUpdateEffect (phase))
     resyncAll()
   }
 })
@@ -1377,17 +1549,17 @@ REDISPATCHER.useUpdate = function _useUpdate () {
 }
 
 function reduceForceUpdate (state: StateInfo, effect: ForceUpdateEffect) {
-  const { step } = effect
-  const node = state.findNodeByStep (step)
-  console.log ("found node", node)
+  const { phase } = effect
+  const nodule = state.findNoduleByPhase (phase)
+  // console.log ("found nodule", nodule)
 
-  if (! (node instanceof CleanNode)) {
-    throw new Error ("Can't update dirty node")
-    // state = state.nodes.without (x => x === node)
+  if (! (nodule instanceof CleanNodule)) {
+    throw new Error ("Can't update dirty nodule")
+    // state = state.nodules.without (x => x === nodule)
     // state = state.tasks.without (x => x.edge.equals (edge))
   }
 
-  const task = new TaskInfo (node.edge)
+  const task = new TaskInfo (nodule.edge)
   effect.return()
   return state.withTask (task)
 }
@@ -1395,27 +1567,27 @@ function reduceForceUpdate (state: StateInfo, effect: ForceUpdateEffect) {
 function reduceUseUpdate (state: ActiveState, effect: UseUpdateEffect) {
   const task = state.peek()
 
-  const node = state.nodes.get (x => x.edge.equals (task.edge))
+  const nodule = state.nodules.get (x => x.edge.equals (task.edge))
 
-  if (node instanceof DirtyNode) {
-    const step = new UpdateStep()
-    state = node.withStep (state, step)
+  if (nodule instanceof DirtyNodule) {
+    const phase = new UpdatePhase()
+    state = nodule.withPhase (state, phase)
 
-    effect.return (step.id)
+    effect.return (phase.id)
     return state.next()
   }
-  else if (node instanceof CleanNode) {
-    const step = node.step (state.step)
+  else if (nodule instanceof CleanNodule) {
+    const phase = nodule.at (state.phase)
 
-    if (! (step instanceof UpdateStep)) {
-      throw new Error ("[reduceUseUpdate] step not found")
+    if (! (phase instanceof UpdatePhase)) {
+      throw new Error ("[reduceUseUpdate] phase not found")
     }
 
-    effect.return (step.id)
+    effect.return (phase.id)
     return state.next()
   }
 
-  throw new Error ("[reduceUseUpdate] unknown node")
+  throw new Error ("[reduceUseUpdate] unknown nodule")
 }
 
 export function useUpdate () {
@@ -1439,7 +1611,7 @@ export function useUpdate () {
 
 export class UseAtomicEffect extends Effect <Atom <any>> {
   constructor (
-    public func: Func,
+    public proc: ProcStepSymbol,
     public args: any[],
   ) {
     super()
@@ -1447,7 +1619,8 @@ export class UseAtomicEffect extends Effect <Atom <any>> {
 }
 
 REDISPATCHER.useAtomic = extendStore (function* (func: Func, ...args: any[]) {
-  return yield* new UseAtomicEffect (func, args)
+  const proc = yield* new ProcEffect (func, args)
+  return yield* new UseAtomicEffect (proc, args)
 })
 
 function reduceUseAtomic (state: StateInfo, effect: UseAtomicEffect) {
@@ -1458,13 +1631,13 @@ function reduceUseAtomic (state: StateInfo, effect: UseAtomicEffect) {
   const prev = state.peek()
 
   const args = effect.args.map (x => new ValueParam (x))
-  const edge = new CleanEdge (prev.edge.scope, effect.func, args)
+  const edge = new CleanEdge (prev.edge.scope, effect.proc, args)
 
   const pointer = new EdgePointer (edge)
   state = state.pointers.with (pointer)
   effect.return (pointer.atom)
 
-  const found = state.nodes.find (x => x.edge.equals (edge))
+  const found = state.nodules.find (x => x.edge.equals (edge))
   if (found) return state
   else return state.withTask (new TaskInfo (edge))
 }

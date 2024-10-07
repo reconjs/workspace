@@ -2,8 +2,9 @@ import { render, screen, waitFor } from "@testing-library/react"
 import { createContext, PropsWithChildren, Suspense, use } from "react"
 // import { Regenerator, get$, use$ } from "recon"
 import { atomic } from "recon"
-import { vi, beforeEach, describe, expect, test } from "vitest"
+import { vi, beforeEach, describe, expect, test, afterEach } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
+import { timeout } from "@reconjs/utils"
 
 expect.extend (matchers)
 
@@ -56,6 +57,7 @@ describe ("useHelloAtom", () => {
 
   describe ("useHelloAtom (async)", () => {
     const useHelloAtom = atomic (async () => {
+      // await timeout (1000)
       return "Hello"
     })
     
@@ -65,7 +67,12 @@ describe ("useHelloAtom", () => {
       return <h1>{hello} World</h1>
     }
 
+    afterEach (() => {
+      // vi.clearAllTimers()
+    })
+
     beforeEach (() => {
+      // vi.useFakeTimers()
       render (
         <Suspense fallback={LOADING}>
           <App />
@@ -74,11 +81,15 @@ describe ("useHelloAtom", () => {
     })
 
     test ("suspends", () => {
+      // vi.advanceTimersByTime (1000)
+      
       expect (screen.getByRole ("heading"))
         .toHaveTextContent ("Loading...")
     })
 
     test ("resolves to 'Hello World'", async () => {
+      // vi.advanceTimersByTime (1000)
+
       await waitFor (() => {
         expect (screen.getByRole ("heading"))
           .toHaveTextContent ("Hello World")
@@ -87,17 +98,19 @@ describe ("useHelloAtom", () => {
   })
 
   test ("useTextAtom (both)", async () => {
+    // vi.advanceTimersByTime (1000)
+
     const useTextAtom = atomic (async (lang: string, english: string) => {
       console.log ("useTextAtom", lang, english)
       if (lang === "en") return english
     })
     
     function App () {
-      const helloAtom = useTextAtom ("en", "Hello")
-      const worldAtom = useTextAtom ("en", "World")
+      const _hello = useTextAtom ("en", "Hello")
+      const _world = useTextAtom ("en", "World")
       
-      const hello = use (helloAtom)
-      const world = use (worldAtom)
+      const hello = use (_hello)
+      const world = use (_world)
       
       return <h1>{hello} {world}</h1>
     }

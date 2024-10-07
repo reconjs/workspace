@@ -72,11 +72,15 @@ export function defineStore <T> (
       const iter = proc (...args)
       
       let prev = NEVER
+      let effect: Effect = NEVER
       
       try {
-        for (const _ of loop ("defineSyncAction")) {
+        while (true) {
+        // for (const _ of loop ("defineSyncAction")) {
           const { done, value } = iter.next()
           if (done) return value
+
+          effect = value
           
           if (! (value instanceof Effect)) {
             throw new Error ("[defineSyncAction] only accepts Effects")
@@ -92,8 +96,14 @@ export function defineStore <T> (
         }
       }
       catch (error) {
-        console.group ("[defineSyncAction] ERROR; state:")
+        console.group ("[defineSyncAction] ERROR")
+        console.log ("effect:", effect)
+        console.group ("state:")
+
+        // @ts-ignore
         if (typeof state.log === "function") state.log()
+        
+        console.groupEnd()
         console.groupEnd()
         faulty.throw (error)
       }

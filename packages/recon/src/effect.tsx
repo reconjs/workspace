@@ -60,7 +60,7 @@ export class Effect <T = any> {
     }
   }
   
-  get promise() {
+  get promise() {    
     const initPromise = () => {
       if (this.#returns) return Promise.resolve (this.#returns)
       if (this.#throws) return Promise.reject (this.#throws)
@@ -116,7 +116,7 @@ export class Effect <T = any> {
     try {
       const next = this.#iterator.next()
       if (next.value === SKIP) return this.next()
-      if (next.done) throw new Error ("[Atom::next] not possible...")
+      if (next.done) throw new Error ("[Effect::next] not possible...")
       return next
     }
     catch (thrown) {
@@ -132,9 +132,10 @@ export class Effect <T = any> {
       yield SKIP // so that we don't immediately invoke the handler
       try {
         const iter = generator()
-        for (const _ of loop ("Atom::yield")) {
+        for (const _ of loop ("Effect::yield")) {
           const { done, value } = iter.next()
           if (done) return
+          // console.log ("Effect::yield", value)
           yield value
         }
       }
