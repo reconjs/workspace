@@ -50,4 +50,4 @@ A hook that is shared between components.
 
 Currently, this library isn't being published because it doesn't work yet.
 
-v0.1 is coming in early October 2024!
+v0.1 is coming in early November 2024!

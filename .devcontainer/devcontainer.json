@@ -2,7 +2,7 @@
   "name": "Node.js & TypeScript",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:0-20",
   "updateContentCommand": "pnpm install",
-  "postAttachCommand": "pnpm dev",
+  "postAttachCommand": "pnpm skip",
   "waitFor": "onCreateCommand",
   "forwardPorts": [3000,5173],
   "portsAttributes": {
