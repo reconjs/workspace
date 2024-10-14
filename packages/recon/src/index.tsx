@@ -1,4 +1,15 @@
+import "./new-states/aspect"
+import "./new-states/dispatcher"
+import "./new-states/edge"
+import "./new-states/entrypoint"
+import "./new-states/node"
+import "./new-states/scope"
+import "./new-states/signal"
+import "./new-states/task"
+
 export { _use, revalidate } from "./state"
 export { atomic } from "./atomic"
 export type { Atom } from "./atomic"
 export { useView } from "./use-view"
+
+export { hoist } from "./hoist"

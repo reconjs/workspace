@@ -12,11 +12,11 @@ type Performer <T = any> = Genr <T, Subject>
 export function perform <P extends Performer> (func: P): Returns <P> {
   if (func instanceof GeneratorFunction) {
     // @ts-ignore
-    return performSync (clazz, func)
+    return performSync (func)
   }
   if (func instanceof AsyncGeneratorFunction) {
     // @ts-ignore
-    return performAsync (clazz, func)
+    return performAsync (func)
   }
   throw new Error ("[perform] generator function required")
 }

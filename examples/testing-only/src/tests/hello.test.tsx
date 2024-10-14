@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import { createContext, PropsWithChildren, Suspense, use } from "react"
 // import { Regenerator, get$, use$ } from "recon"
-import { atomic } from "recon"
+import { atomic, hoist } from "recon"
 import { vi, beforeEach, describe, expect, test, afterEach } from "vitest"
 import * as matchers from "@testing-library/jest-dom/matchers"
 import { timeout } from "@reconjs/utils"
@@ -10,12 +10,12 @@ expect.extend (matchers)
 
 const LOADING = <h2>Loading...</h2>
 
-describe ("useHelloAtom", () => {
+describe ("useHelloSignal", () => {
   test ("no use", () => {
-    const useHelloAtom = atomic (() => "Hello")
+    const useHelloSignal = hoist (() => "Hello")
     
     function App () {
-      const helloAtom = useHelloAtom ()
+      const _hello = useHelloSignal ()
       const hello = "Hello" // use (helloAtom)
       return <h1>{hello} World</h1>
     }
@@ -33,12 +33,12 @@ describe ("useHelloAtom", () => {
       .toHaveTextContent ("Hello World")
   })
 
-  test ("useHelloAtom (sync)", () => {
-    const useHelloAtom = atomic (() => "Hello")
+  test ("one sync use", () => {
+    const useHelloSignal = hoist (() => "Hello")
     
     function App () {
-      const helloAtom = useHelloAtom ()
-      const hello = use (helloAtom)
+      const _hello = useHelloSignal ()
+      const hello = use (_hello)
       return <h1>{hello} World</h1>
     }
     
@@ -55,15 +55,15 @@ describe ("useHelloAtom", () => {
       .toHaveTextContent ("Hello World")
   })
 
-  describe ("useHelloAtom (async)", () => {
-    const useHelloAtom = atomic (async () => {
+  describe ("one async use", () => {
+    const useHelloSignal = hoist (async () => {
       // await timeout (1000)
       return "Hello"
     })
     
     function App () {
-      const helloAtom = useHelloAtom()
-      const hello = use (helloAtom)
+      const _hello = useHelloSignal()
+      const hello = use (_hello)
       return <h1>{hello} World</h1>
     }
 
@@ -97,7 +97,7 @@ describe ("useHelloAtom", () => {
     })
   })
 
-  test ("useTextAtom (both)", async () => {
+  test ("shared async", async () => {
     // vi.advanceTimersByTime (1000)
 
     const useTextAtom = atomic (async (lang: string, english: string) => {
@@ -130,7 +130,7 @@ describe ("useHelloAtom", () => {
     })
   })
 
-  test.skip ("useTextAtom (+ generators)", async () => {
+  test.skip ("generators", async () => {
     const useTextAtom = atomic (async (lang: string, english: string) => {
       if (lang === "en") return english
     })
@@ -170,7 +170,7 @@ describe ("useHelloAtom", () => {
     })
   })
 
-  test.todo ("useTextAtom (preloading)", async () => {
+  test.todo ("preloading", async () => {
     const useTextAtom = atomic (async (lang: string, english: string) => {
       // TODO: support other languages
       return english

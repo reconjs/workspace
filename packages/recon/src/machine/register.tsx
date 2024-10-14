@@ -10,10 +10,10 @@ export abstract class Pointer <T = any> extends Subject {
     const _this = this
 
     // @ts-ignore
-    this.#generator = function* () {
+    this.#generator = doo (function* () {
       yield _this
       throw new Error ("[Pointer] unhandled.")
-    }
+    })
   }
 
   *[Symbol.iterator](): Generator <Subject, T> {
@@ -31,7 +31,7 @@ export abstract class Pointer <T = any> extends Subject {
     // @ts-ignore
     this.#generator = doo (function* () {
       yield new Skip()
-      yield* func()
+      return yield* func()
     })
   }
 }

@@ -13,7 +13,10 @@ const HANDLERS = new Map <Clazz, SubjectHandler>()
 
 export function runHandler (subject: Subject) {
   const handler = HANDLERS.get (subject.constructor as Clazz)
-  if (!handler) throw new Error ("[runHandler] not found!")
+  if (!handler) {
+    console.error ("[runHandler] not found!", subject)
+    throw new Error ("Error in runHandler")
+  }
 
   const iter = handler (subject)
 
