@@ -1,4 +1,4 @@
-import { onPerform, Pointer } from "../machine"
+import { onPerform, Subject } from "../machine"
 import { NodeSymbol } from "./node"
 import { ScopeSymbol } from "./scope"
 import { Signal } from "./signal"
@@ -42,7 +42,7 @@ export class CleanEdge extends EdgeInfo {
 }
 
 /* TODO: Revise after port over
-export class EdgePointer extends Pointer <EdgeSymbol> {
+export class EdgeSubject extends Subject <EdgeSymbol> {
   constructor (
     public readonly scope: ScopeSymbol,
     public readonly proc: ProcSymbol,
@@ -52,7 +52,7 @@ export class EdgePointer extends Pointer <EdgeSymbol> {
   }
 }
 
-onPerform (EdgePointer, function* ({ scope, proc, args }) {
+onPerform (EdgeSubject, function* ({ scope, proc, args }) {
   const found = EdgeStore.self.edge.get (scope)
   if (found) return found
 

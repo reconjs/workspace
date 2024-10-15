@@ -1,8 +1,8 @@
 import { guidBy } from "@reconjs/utils"
-import { onPerform, Pointer } from "../machine"
+import { onPerform, Subject } from "../machine"
 import { CleanEdge, EdgeInfo } from "./edge"
-import { EntryEdgePointer } from "./entrypoint"
-import { Fulfilled, DoneSubject, Status, StatusPointer } from "./signal"
+import { EntryEdgeSubject } from "./entrypoint"
+import { Fulfilled, DoneSubject, Status, StatusSubject } from "./signal"
 import { ExecuteSubject } from "./task"
 
 export class NodeSymbol {}
@@ -15,7 +15,7 @@ function findNodeByEdge (edge: EdgeInfo) {
   return entry?.[0]
 }
 
-export class NodeEdgePointer extends Pointer <EdgeInfo> {
+export class NodeEdgeSubject extends Subject <EdgeInfo> {
   constructor (
     public readonly node: NodeSymbol,
   ) {
@@ -23,7 +23,7 @@ export class NodeEdgePointer extends Pointer <EdgeInfo> {
   }
 }
 
-export class NodePointer extends Pointer <NodeSymbol> {
+export class NodeSubject extends Subject <NodeSymbol> {
   constructor (
     public readonly edge: EdgeInfo,
   ) {
@@ -31,7 +31,7 @@ export class NodePointer extends Pointer <NodeSymbol> {
   }
 }
 
-export class NodeStatusSubject extends Pointer <Status> {
+export class NodeStatusSubject extends Subject <Status> {
   constructor (
     public readonly node: NodeSymbol, 
     public readonly status: Status,
@@ -47,7 +47,7 @@ onPerform (NodeStatusSubject, function* ({ node, status }) {
   yield new DoneSubject (prev.edge)
 })
 
-onPerform (NodePointer, function* ({ edge }) {
+onPerform (NodeSubject, function* ({ edge }) {
   const found = findNodeByEdge (edge)
   if (found) return found
 
@@ -56,13 +56,13 @@ onPerform (NodePointer, function* ({ edge }) {
   return node
 })
 
-onPerform (NodeEdgePointer, function* ({ node }) {
+onPerform (NodeEdgeSubject, function* ({ node }) {
   const found = NODE_BY_ID.get (node)
-  if (!found) throw new Error ("[NodeEdgePointer] not found")
+  if (!found) throw new Error ("[NodeEdgeSubject] not found")
   return found.edge
 })
 
-onPerform (StatusPointer, function* ({ signal }) {
+onPerform (StatusSubject, function* ({ signal }) {
   /* TODO: Check Suspense
   const suspended = state.suspenses.find (x => x.task === task.id)
   if (suspended) {
@@ -72,8 +72,8 @@ onPerform (StatusPointer, function* ({ signal }) {
   }
   */
 
-  const edge = yield* new EntryEdgePointer (signal)
-  const node = yield* new NodePointer (edge)
+  const edge = yield* new EntryEdgeSubject (signal)
+  const node = yield* new NodeSubject (edge)
 
   yield new ExecuteSubject (node)
   

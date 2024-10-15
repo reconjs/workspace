@@ -1,9 +1,9 @@
 import React from "react"
 import { Func } from "@reconjs/utils"
-import { onPerform, perform, Pointer, Subject } from "../machine"
+import { onPerform, perform, Subject } from "../machine"
 import { TaskSymbol } from "./task"
 
-class HookPointer extends Pointer <any> {
+class HookSubject extends Subject <any> {
   constructor (
     public readonly key: string|symbol,
     public readonly args: any[],
@@ -16,7 +16,7 @@ const REDISPATCHER = new Proxy ({}, {
   get: (target, key) => {
     return (...args: any[]) => {
       return perform (function* () {
-        return yield* new HookPointer (key, args)
+        return yield* new HookSubject (key, args)
       })
     }
   }
@@ -46,13 +46,13 @@ export function useDispatcher (key: string): Func|undefined {
 const STACK = [] as TaskSymbol[]
 let prevDispatcher: any = null
 
-export class PushSubject extends Subject {
+export class PushSubject extends Subject<void> {
   constructor (public readonly task: TaskSymbol) {
     super()
   }
 }
 
-export class PopSubject extends Subject {
+export class PopSubject extends Subject<void> {
   constructor (public readonly task: TaskSymbol) {
     super()
   }

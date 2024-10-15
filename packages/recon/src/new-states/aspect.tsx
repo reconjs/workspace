@@ -1,5 +1,5 @@
 import { range } from "@reconjs/utils"
-import { onPerform, Pointer } from "../machine"
+import { onPerform, Subject } from "../machine"
 import { EdgeSymbol } from "./edge"
 import { ScopeSymbol } from "./scope"
 
@@ -13,7 +13,7 @@ abstract class Aspect {}
 const ASPECTS = new Map <AspectSymbol, Aspect>()
 const SYMBOLS = new Map <ProcSymbol, Set<AspectSymbol>>()
 
-export class AspectsPointer extends Pointer <AspectSymbol> {
+export class AspectsSubject extends Subject <AspectSymbol> {
   constructor (
     public readonly proc: ProcSymbol,
     public readonly scope: ScopeSymbol,
@@ -32,13 +32,13 @@ function symbolsOf (proc: ProcSymbol, init: () => AspectSymbol[]) {
   return aspects.values()
 }
 
-onPerform (AspectsPointer, function* ({ proc, scope, args }) {
+onPerform (AspectsSubject, function* ({ proc, scope, args }) {
   const argAspects = []
   for (const index of range (args.length)) {
     const arg = args [index]
 
     if (arg.__recon === "signal") {
-      const proc = yield* new SignalProcPointer (arg)
+      const proc = yield* new SignalProcSubject (arg)
       argAspects.push (new SignalArgAspect (index, proc))
     }
     else {

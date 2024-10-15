@@ -5,7 +5,7 @@ import { Returns } from "./types"
 import { useResync } from "./resync"
 import { ScopeSymbol, ROOT } from "./new-states/scope"
 import { useDispatcher } from "./new-states/dispatcher"
-import { EntryPointer } from "./new-states/entrypoint"
+import { EntrySubject } from "./new-states/entrypoint"
 import { perform } from "./machine"
 import { CleanEdge, ValueParam } from "./new-states/edge"
 
@@ -42,7 +42,7 @@ function useRecon (...args: any[]) {
   return perform (function* () {
     const _args = args.map (arg => new ValueParam (arg))
     const edge = new CleanEdge (scope, hook, _args)
-    return yield* new EntryPointer (id, edge)
+    return yield* new EntrySubject (id, edge)
   })
 }
 

@@ -1,13 +1,17 @@
-import { onPerform, Pointer } from "../machine"
+import { onPerform, Subject } from "../machine"
 import { EdgeInfo } from "./edge"
-import { ReconSignal } from "./signal"
+import { createSignal, Signal } from "./signal"
 import { EnqueueSubject } from "./task"
 
-const VIEWID_BY_SIGNAL = new Map <ReconSignal, string>()
-const SIGNAL_BY_VIEWID = new Map <string, ReconSignal>()
+/*
+const VIEWID_BY_SIGNAL = new Map <Signal<any>, string>()
+const SIGNAL_BY_VIEWID = new Map <string, Signal<any>>()
 const EDGE_BY_VIEWID = new Map <string, EdgeInfo>()
+*/
 
-export class EntryPointer extends Pointer <ReconSignal> {
+const EDGE_BY_SIGNAL = new Map <Signal<any>, EdgeInfo>()
+
+export class EntrySubject extends Subject <Signal<any>> {
   constructor (
     public readonly id: string, 
     public readonly edge: EdgeInfo,
@@ -16,47 +20,40 @@ export class EntryPointer extends Pointer <ReconSignal> {
   }
 }
 
-onPerform (EntryPointer, function* ({ id, edge }) {
-  // const found = SIGNAL_BY_VIEWID.get (id)
+function findSignalByEdge (edge: EdgeInfo) {
+  const found = Array.from (EDGE_BY_SIGNAL.entries())
+    .find (([ , x ]) => x.equals (edge))
+  return found?.[0]
+}
+
+onPerform (EntrySubject, function* ({ edge }) {
+  const found = findSignalByEdge (edge)
   // TODO: Update edge always
-  // if (found) return found
+  if (found) return found
 
-  if (!id) throw new Error ("[EntryPointer] id must be string")
-
-  if (typeof id !== "string") throw new Error ("[EntryPointer] id must be string")
-  console.log ("creating a ReconSignal", id)
-  const signal = new ReconSignal (() => {})
-  signal.viewId = id
-
-  SIGNAL_BY_VIEWID.set (id, signal)
-  VIEWID_BY_SIGNAL.set (signal, id)
-  EDGE_BY_VIEWID.set (id, edge)
+  const signal = createSignal()
+  EDGE_BY_SIGNAL.set (signal, edge)
 
   try {
     yield new EnqueueSubject (signal)
   }
   catch (e) {
-    console.error ("[EntryPointer] error")
+    console.error ("[EntrySubject] error")
   }
   
   return signal
 })
 
-export class EntryEdgePointer extends Pointer <EdgeInfo> {
+export class EntryEdgeSubject extends Subject <EdgeInfo> {
   constructor (
-    public readonly signal: ReconSignal,
+    public readonly signal: Signal<any>,
   ) {
     super()
   }
 }
 
-onPerform (EntryEdgePointer, function* ({ signal }) {
-  const viewId = VIEWID_BY_SIGNAL.get (signal)
-  console.log ("[EntryEdgePointer] signal", signal, viewId)
-  if (!viewId) throw new Error ("[EntryEdgePointer] viewId not found")
-  
-  const found = EDGE_BY_VIEWID.get (viewId)
-  if (!found) throw new Error ("[EntryEdgePointer] edge not found")
-
+onPerform (EntryEdgeSubject, function* ({ signal }) {
+  const found = EDGE_BY_SIGNAL.get (signal)
+  if (!found) throw new Error ("[EntryEdgeSubject] edge not found")
   return found
 })

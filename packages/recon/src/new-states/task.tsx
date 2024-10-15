@@ -2,13 +2,13 @@ import { onPerform, Subject } from "../machine"
 import { GeneratorFunction } from "../types"
 import { PopSubject, PushSubject } from "./dispatcher"
 import { EdgeInfo, ValueParam } from "./edge"
-import { EntryEdgePointer } from "./entrypoint"
-import { NodeEdgePointer, NodeSymbol, NodeStatusSubject } from "./node"
+import { EntryEdgeSubject } from "./entrypoint"
+import { NodeEdgeSubject, NodeSymbol, NodeStatusSubject } from "./node"
 import { Fulfilled, Pending, Rejected } from "./signal"
 
 export class TaskSymbol {}
 
-export class ExecuteSubject extends Subject {
+export class ExecuteSubject extends Subject<void> {
   constructor (
     public readonly node: NodeSymbol,
   ) {
@@ -16,7 +16,7 @@ export class ExecuteSubject extends Subject {
   }
 }
 
-export class EnqueueSubject extends Subject {
+export class EnqueueSubject extends Subject<void> {
   constructor (public readonly signal: any) {
     super()
   }
@@ -31,7 +31,7 @@ function findTaskByEdge (edge: EdgeInfo) {
 }
 
 onPerform (ExecuteSubject, function* ({ node }) {
-  const edge = yield* new NodeEdgePointer (node)
+  const edge = yield* new NodeEdgeSubject (node)
   const task = findTaskByEdge (edge)
   if (!task) return
 
@@ -79,7 +79,7 @@ onPerform (ExecuteSubject, function* ({ node }) {
 onPerform (EnqueueSubject, function* ({ signal }) {
   console.log ("EnqueueSubject")
 
-  const edge = yield* new EntryEdgePointer (signal)
+  const edge = yield* new EntryEdgeSubject (signal)
   const task = findTaskByEdge (edge)
   if (task) return
 

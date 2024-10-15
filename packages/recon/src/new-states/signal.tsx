@@ -1,92 +1,84 @@
 import { ExoticComponent, memo, MemoExoticComponent } from "react"
 
 import { Func } from "@reconjs/utils"
-import { onPerform, perform, Pointer, Subject } from "../machine"
+import { onPerform, perform, Subject } from "../machine"
 import { PropsOf } from "@reconjs/utils-react"
 import { EdgeInfo } from "./edge"
-import { EntryEdgePointer } from "./entrypoint"
+import { EntryEdgeSubject } from "./entrypoint"
 
-const COMPONENT_SYMBOL = memo (() => null).$$typeof as MemoExoticComponent<any>["$$typeof"]
+const COMPONENT_SYMBOL = memo (() => null).$$typeof
 
 export type Signal <T> = Promise <T>
   & ExoticComponent <PropsOf<T>>
   & Generator <ExoticComponent <{}>, T, void>
 
-export class ReconSignal extends Promise <any> {
-  private $$typeof = COMPONENT_SYMBOL
-  private type: Func
+export function createSignal () {
+  const controller: SignalController = {} as any
 
-  #self?: Status
+  const signal: any = new Promise ((resolve, reject) => {
+    controller.resolve = resolve
+    controller.reject = reject
+  })
 
-  private get self() {
-    const _this = this
-    return this.#self ??= perform (function* () {
-      return yield* new StatusPointer (_this)
+  CONTROLLER_BY_SIGNAL.set (signal, controller)
+
+  signal.$$typeof = COMPONENT_SYMBOL
+  signal.type = function Recon (props: any) {
+    throw new Error ("Cannot yet mount a Signal")
+  }
+
+  function getSelf() {
+    return perform (function* () {
+      return yield* new StatusSubject (signal)
     })
   }
 
-  [Symbol.toStringTag] = "ReconSignal"
+  Object.defineProperty (signal, "status", {
+    get () {
+      if (getSelf() instanceof Pending) return "pending"
+      if (getSelf() instanceof Fulfilled) return "fulfilled"
+      if (getSelf() instanceof Rejected) return "rejected"
 
-  constructor (
-    executor: (resolve: Func, reject: Func) => void
-  ) {
-    const controller: SignalController = {} as any
-    super ((resolve, reject) => {
-      executor (resolve, reject)
-      controller.resolve = resolve
-      controller.reject = reject
-    })
-
-    // NOTE: THIS DOES NOT WORK
-    CONTROLLER_BY_SIGNAL.set (this, controller)
-
-    const _this = this
-    // @ts-ignore
-    this.type = function Recon (props: any) {
-      throw new Error ("Cannot yet mount a Signal")
+      throw new Error ("Invalid Status")
     }
-  }
+  })
 
-  get status() {
-    if (this.self instanceof Pending) return "pending"
-    if (this.self instanceof Fulfilled) return "fulfilled"
-    if (this.self instanceof Rejected) return "rejected"
+  Object.defineProperty (signal, "value", {
+    get() {
+      const self = getSelf()
+      if (self instanceof Fulfilled) return self.value
+      throw new Error ("Not Fulfilled")
+    }
+  })
 
-    throw new Error ("Invalid Status")
-  }
+  Object.defineProperty (signal, "reason", {
+    get() {
+      const self = getSelf()
+      if (self instanceof Rejected) return self.reason
+      throw new Error ("Not Rejected")
+    }
+  })
 
-  get value() {
-    if (this.self instanceof Fulfilled) return this.self.value
-    throw new Error ("Not Fulfilled")
-  }
-
-  get reason() {
-    if (this.self instanceof Rejected) return this.self.reason
-    throw new Error ("Not Rejected")
-  }
-
-  *[Symbol.iterator](): Generator <Signal <any>, any, void> {
-    yield this as any as Signal <any>
+  signal[Symbol.iterator] = function* () {
+    yield signal as any as Signal <any>
     
-    if (this.self instanceof Pending) throw this
-    if (this.self instanceof Fulfilled) return this.value
-    if (this.self instanceof Rejected) throw this.reason
+    if (getSelf() instanceof Pending) throw signal
+    if (getSelf() instanceof Fulfilled) return signal.value
+    if (getSelf() instanceof Rejected) throw signal.reason
 
     throw new Error ("[Signal] infinite loop")
   }
 
-  then (onFulfilled: Func, onRejected: Func) {
-    return super.then (onFulfilled, onRejected)
-  }
+  return signal as Signal <any>
 }
 
-export class StatusPointer extends Pointer <Status> {
-  constructor (public readonly signal: ReconSignal) {
+export class StatusSubject extends Subject<Status> {
+  constructor (public readonly signal: Signal <any>) {
     super()
   }
 }
 
-export class DoneSubject extends Subject {
+export class DoneSubject extends Subject<void> {
   constructor (public readonly edge: EdgeInfo) {
     super()
   }
@@ -94,7 +86,7 @@ export class DoneSubject extends Subject {
 
 onPerform (DoneSubject, function* (subject) {
   for (const [ signal, controller ] of CONTROLLER_BY_SIGNAL.entries()) {
-    const edge = yield* new EntryEdgePointer (signal)
+    const edge = yield* new EntryEdgeSubject (signal)
     if (edge.equals (subject.edge)) {
       controller.resolve()
     }
@@ -109,7 +101,7 @@ type SignalController = {
   reject: Func,
 }
 
-const CONTROLLER_BY_SIGNAL = new Map <ReconSignal, SignalController>()
+const CONTROLLER_BY_SIGNAL = new Map <Signal<any>, SignalController>()
 
 // STATUS CLASSES
 
