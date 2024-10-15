@@ -3,6 +3,7 @@
   "scripts": {
     "dev": "nx dev hello-world",
     "nx": "nx",
+    "skip": "",
     "test": "nx test testing-only"
   },
   "devDependencies": {
